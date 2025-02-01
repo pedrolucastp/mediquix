@@ -1,5 +1,5 @@
 <template>
-  <main>
+  <div>
     <p>Selecione um dos jogos abaixo para começar:</p>
     <div class="game-links">
       <GameCard
@@ -43,7 +43,7 @@
         description="Visualize, adicione, edite e gerencie todos os termos e definições."
       />
     </div>
-  </main>
+  </div>
 </template>
 
 <script>

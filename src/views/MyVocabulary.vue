@@ -1,11 +1,11 @@
 <template>
   <div class="my-vocabulary">
-    <header>
+    <div>
       <h1>Vocabulário Médico</h1>
       <SelectorsComponent />
-    </header>
+    </div>
 
-    <main>
+    <div>
       <div class="filter-options">
         <button @click="toggleHighlightDuplicates">
           {{ highlightDuplicates ? 'Remover Destaque' : 'Destacar Duplicatas' }}
@@ -74,12 +74,7 @@
           </div>
         </div>
       </div>
-    </main>
-
-    <footer>
-      <router-link to="/">← Início</router-link>
-      <small>&copy; 2024 MEDiQUiZ. Todos os direitos reservados.</small>
-    </footer>
+    </div>
 
     <div class="modal" v-if="showAddModal">
       <div class="modal-content">
@@ -295,11 +290,12 @@ function wordKey(word) {
 <style scoped>
 .my-vocabulary {
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-y: clip;
 }
-header {
-  text-align: center;
-  margin-bottom: 1rem;
-}
+
 .filter-options {
   display: flex;
   flex-wrap: wrap;

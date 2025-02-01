@@ -16,11 +16,21 @@ export default {
 
 <style scoped>
 footer {
-  text-align: center;
-  padding: 1rem;
-  background-color: #f8f8f8;
   border-top: 1px solid #ddd;
-}
+    /* background-color: var(--secondary-color); */
+    font-size: smaller;
+    /* color: #fff; */
+    padding: 4px 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px 10px 10px 10px;
+    /* position: absolute; */
+    /* bottom: 0; */
+    width: 100dvw;
+} 
+
 
 .footer-nav {
   margin-bottom: 0.5rem;
