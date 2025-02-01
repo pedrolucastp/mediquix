@@ -8,7 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
       # Step 1: Checkout the repository
       - name: Checkout code
@@ -35,4 +36,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
-          clean: true
