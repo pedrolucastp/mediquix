@@ -1,46 +1,43 @@
 <template>
   <div class="selectors-container">
     <button class="collapse-toggle" @click="toggleCollapse">
-      <template v-if="isExpanded">
-        <svg width="24" height="24" viewBox="0 0 24 24">
-          <path
-            fill="currentColor"
-            d="M12 8l6 6c.3.3.3.7 0 1s-.7.3-1 0l-5-5-5 5c-.3.3-.7.3-1 0s-.3-.7 0-1l6-6z"
-          />
+      <span class="toggle-text" v-if="isExpanded">
+        Especialidade &nbsp;
+        <svg class="toggle-icon" width="24" height="24" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M12 8l6 6c.3.3.3.7 0 1s-.7.3-1 0l-5-5-5 5c-.3.3-.7.3-1 0s-.3-.7 0-1l6-6z"/>
         </svg>
-      </template>
-      <template v-else>
-        Especialidade 
-        <svg width="24" height="24" viewBox="0 0 24 24">
-          <path
-            fill="currentColor"
-            d="M12 16.5l-6-6c-.3-.3-.3-.7 0-1 .3-.3.7-.3 1 0l5 5 5-5c.3-.3.7-.3 1 0s.3.7 0 1l-6 6z"
-          />
+        &nbsp;Dificuldade
+      </span>
+      <span class="toggle-text" v-else>
+        Especialidade &nbsp;
+        <svg class="toggle-icon" width="24" height="24" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M12 16.5l-6-6c-.3-.3-.3-.7 0-1 .3-.3.7-.3 1 0l5 5 5-5c.3-.3.7-.3 1 0s.3.7 0 1l-6 6z"/>
         </svg>
-        Dificuldade
-      </template>
+        &nbsp;Dificuldade
+      </span>
     </button>
-
-    <div class="collapsible-content" :class="{ expanded: isExpanded }">
-      <div class="controls-option">
-        <label for="specialty-select">Especialidade</label>
-        <select id="specialty-select" v-model="selectedSpecialty">
-          <option value="all">Todas</option>
-          <option v-for="(spec, index) in specialties" :key="index" :value="index">
-            {{ spec }}
-          </option>
-        </select>
+    <transition name="fade">
+      <div class="collapsible-content" :class="{ expanded: isExpanded }">
+        <div class="controls">
+          <div class="controls-option">
+            <select id="specialty-select" v-model="selectedSpecialty">
+              <option value="all">Todas</option>
+              <option v-for="(spec, index) in specialties" :key="index" :value="index">
+                {{ spec }}
+              </option>
+            </select>
+          </div>
+          <div class="controls-option">
+            <select id="difficulty-select" v-model="selectedDifficulty">
+              <option value="all">Todas</option>
+              <option value="1">Fácil</option>
+              <option value="2">Média</option>
+              <option value="3">Difícil</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="controls-option">
-        <label for="difficulty-select">Dificuldade</label>
-        <select id="difficulty-select" v-model="selectedDifficulty">
-          <option value="all">Todas</option>
-          <option value="1">Fácil</option>
-          <option value="2">Média</option>
-          <option value="3">Difícil</option>
-        </select>
-      </div>
-    </div>
+    </transition>
   </div>
 </template>
 
@@ -50,7 +47,6 @@ import { useSettingsStore } from '@/store/userSettings'
 import { specialties } from '@/data/defaultSpecialties.js'
 
 const emit = defineEmits(['specialty-change', 'difficulty-change'])
-
 const settingsStore = useSettingsStore()
 
 const selectedSpecialty = computed({
@@ -63,11 +59,10 @@ const selectedDifficulty = computed({
   set: (value) => settingsStore.setDifficulty(value)
 })
 
-watch(selectedSpecialty, (newVal, oldVal) => {
+watch(selectedSpecialty, (newVal) => {
   emit('specialty-change', newVal)
 })
-
-watch(selectedDifficulty, (newVal, oldVal) => {
+watch(selectedDifficulty, (newVal) => {
   emit('difficulty-change', newVal)
 })
 
@@ -85,24 +80,88 @@ function toggleCollapse() {
 .collapse-toggle {
   background: none;
   border: none;
+  color: var(--secondary-color, #333);
   cursor: pointer;
-  font-size: 1rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: transform 0.3s ease, color 0.3s ease;
+  margin: 0 auto;
+}
+.collapse-toggle:hover {
+  color: var(--primary-color, #2ecc71);
+  transform: scale(1.1);
+}
+.toggle-icon {
+  transition: transform 0.3s ease;
+}
+.collapse-toggle .toggle-text {
+  display: flex;
+  align-items: center;
 }
 
 .collapsible-content {
-  max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  transition: all 0.5s ease;
+  visibility: hidden;
+  height: 0;
+}
+.collapsible-content.expanded {
+  visibility: visible;
+  height: auto;
+  margin-top: 10px;
 }
 
-.collapsible-content.expanded {
-  max-height: 100px;
+.controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 20px;
+  padding: 0 10px;
 }
 
 .controls-option {
-  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+select {
+  background: var(--select-background, #fff);
+  border: 1px solid var(--select-border, #ccc);
+  border-radius: var(--select-border-radius, 4px);
+  padding: 10px;
+  font-size: var(--select-font-size, 1rem);
+  color: var(--select-color, #333);
+  cursor: pointer;
+  width: 100%;
+}
+#specialty-select {
+  width: 200px;
+}
+#difficulty-select {
+  width: 100px;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+@media only screen and (max-width: 768px) {
+  .controls {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  #specialty-select, #difficulty-select {
+    width: 100%;
+  }
 }
 </style>

@@ -1,32 +1,43 @@
 <template>
   <header>
-    <h1>MedQuix</h1>
-    <!-- If user is not logged in, show a button to open the auth modal -->
+      <router-link to="/">
+        <h1>MedQuix</h1>
+      </router-link>
     <div id="auth-container">
       <div v-if="!authStore.initialized">
         Loading...
       </div>
       <div v-else>
         <div v-if="!authStore.user">
-          <button @click="openModal">Login / Sign Up</button>
+          <button class="auth-btn" @click="openAuthModal">
+            <font-awesome-icon :icon="['fas', 'sign-in-alt']" />
+            Login / Sign Up
+          </button>
         </div>
-        <div v-else>
-          <p>Bem-vindo, {{ authStore.user.email.split('@')[0] }}</p>
-          <button @click="handleLogout">Logout</button>
+        <div v-else class="user-area">
+          <p>Olá, {{ authStore.user.username || authStore.user.email.split('@')[0] }}</p>
+          <button class="auth-btn" @click="openSettingsModal">
+            <font-awesome-icon :icon="['fas', 'cog']" />
+          </button>
+          <button class="auth-btn" @click="handleLogout">
+            <font-awesome-icon :icon="['fas', 'sign-out-alt']" />
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Auth Modal -->
     <transition name="fade">
-      <div class="modal-overlay" v-if="showModal" @click.self="closeModal">
+      <div class="modal-overlay" v-if="showAuthModal" @click.self="closeAuthModal">
         <div class="modal-content">
-          <button class="close-button" @click="closeModal">&times;</button>
+          <button class="close-button" @click="closeAuthModal">&times;</button>
           <div v-if="!isSignup">
             <h3>Login</h3>
             <input type="email" v-model="loginEmail" placeholder="Email" />
             <input type="password" v-model="loginPassword" placeholder="Password" />
-            <button @click="handleLogin">Login</button>
+            <button class="modal-btn" @click="handleLogin">
+              <font-awesome-icon :icon="['fas', 'sign-in-alt']" />
+              Login
+            </button>
             <p>
               Don't have an account?
               <span class="toggle-link" @click="toggleForm">Sign up</span>
@@ -36,7 +47,10 @@
             <h3>Sign Up</h3>
             <input type="email" v-model="signupEmail" placeholder="Email" />
             <input type="password" v-model="signupPassword" placeholder="Password" />
-            <button @click="handleSignup">Sign Up</button>
+            <button class="modal-btn" @click="handleSignup">
+              <font-awesome-icon :icon="['fas', 'user-plus']" />
+              Sign Up
+            </button>
             <p>
               Already have an account?
               <span class="toggle-link" @click="toggleForm">Login</span>
@@ -45,58 +59,121 @@
         </div>
       </div>
     </transition>
+
+    <transition name="fade">
+      <div class="modal-overlay" v-if="showSettingsModal" @click.self="closeSettingsModal">
+        <div class="modal-content">
+          <button class="close-button" @click="closeSettingsModal">&times;</button>
+          <h3>User Settings</h3>
+          <label>
+            Username:
+            <input type="text" v-model="settings.username" />
+          </label>
+          <label>
+            Default Difficulty:
+            <select v-model.number="settings.default_difficulty">
+              <option value="1">Fácil</option>
+              <option value="2">Média</option>
+              <option value="3">Difícil</option>
+            </select>
+          </label>
+          <label>
+            Default Specialty:
+            <select v-model.number="settings.default_speciality">
+              <option v-for="(spec, index) in specialties" :key="index" :value="index">
+                {{ spec }}
+              </option>
+            </select>
+          </label>
+          <button class="modal-btn" @click="saveSettings">
+            <font-awesome-icon :icon="['fas', 'save']" />
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </transition>
   </header>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useAuthStore } from '../store/auth'
+import { ref } from "vue";
+import { useAuthStore } from "../store/auth";
+import { useVocabularyStore } from "../store/vocabularyStore";
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
+const vocabularyStore = useVocabularyStore();
 
-// Modal state and form values
-const showModal = ref(false)
-const isSignup = ref(false)
-const loginEmail = ref('')
-const loginPassword = ref('')
-const signupEmail = ref('')
-const signupPassword = ref('')
+const showAuthModal = ref(false);
+const isSignup = ref(false);
+const loginEmail = ref("");
+const loginPassword = ref("");
+const signupEmail = ref("");
+const signupPassword = ref("");
 
-function openModal() {
-  showModal.value = true
+function openAuthModal() {
+  showAuthModal.value = true;
 }
 
-function closeModal() {
-  showModal.value = false
+function closeAuthModal() {
+  showAuthModal.value = false;
 }
 
 function toggleForm() {
-  isSignup.value = !isSignup.value
+  isSignup.value = !isSignup.value;
 }
 
 async function handleLogin() {
   try {
-    await authStore.login(loginEmail.value, loginPassword.value)
-    closeModal()
+    await authStore.login(loginEmail.value, loginPassword.value);
+    closeAuthModal();
   } catch (error) {
-    alert(error.message)
+    alert(error.message);
   }
 }
 
 async function handleSignup() {
   try {
-    await authStore.signup(signupEmail.value, signupPassword.value)
-    closeModal()
+    await authStore.signup(signupEmail.value, signupPassword.value);
+    closeAuthModal();
   } catch (error) {
-    alert(error.message)
+    alert(error.message);
   }
 }
 
 async function handleLogout() {
   try {
-    await authStore.logout()
+    await authStore.logout();
   } catch (error) {
-    alert(error.message)
+    alert(error.message);
+  }
+}
+
+const showSettingsModal = ref(false);
+const settings = ref({
+  username: "",
+  default_difficulty: 1,
+  default_speciality: 0,
+});
+
+const specialties = vocabularyStore.specialties;
+
+function openSettingsModal() {
+  if (authStore.user && authStore.user.settings) {
+    settings.value = { ...authStore.user.settings };
+  }
+  showSettingsModal.value = true;
+}
+
+function closeSettingsModal() {
+  showSettingsModal.value = false;
+}
+
+async function saveSettings() {
+  try {
+    await authStore.updateUserSettings(settings.value);
+    closeSettingsModal();
+  } catch (error) {
+    alert("Error saving settings: " + error.message);
   }
 }
 </script>
@@ -105,11 +182,47 @@ async function handleLogout() {
 header {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
   padding: 1rem;
 }
 
-/* Modal overlay and content */
+header a {
+  text-decoration: none;
+  color: var(--accent-color)
+}
+
+h1 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 28px;
+}
+
+.user-area {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.auth-btn,
+.modal-btn {
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.auth-btn:hover,
+.modal-btn:hover {
+  background-color: #2980b9;
+  color: white;
+
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -130,6 +243,9 @@ header {
   position: relative;
   max-width: 400px;
   width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .close-button {
@@ -142,13 +258,26 @@ header {
   cursor: pointer;
 }
 
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+input, select {
+  width: 100%;
+  padding: 0.3rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
 .toggle-link {
   color: var(--accent-color);
   cursor: pointer;
   text-decoration: underline;
 }
 
-/* Fade transition for modal */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s ease;
 }

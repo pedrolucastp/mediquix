@@ -18,7 +18,6 @@ export default {
 </script>
 
 <style>
-/* Variáveis CSS */
 :root {
   --primary-color: #2980b9;
   --secondary-color: #2c3e50;
@@ -51,5 +50,16 @@ export default {
   overflow: hidden;
   height: 100dvh;
   width: 100dvw;
+}
+
+main {
+    text-align: center;
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    height: 100%;
 }
 </style>
