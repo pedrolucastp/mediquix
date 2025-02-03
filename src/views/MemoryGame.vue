@@ -1,10 +1,17 @@
 <template>
   <div class="memory-game">
     <h1>Jogo de Memória</h1>
-    <SelectorsComponent @specialty-change="createBoard" @difficulty-change="createBoard" />
+    <SelectorsComponent
+      @specialty-change="createBoard"
+      @difficulty-change="createBoard"
+    />
 
     <p id="definition">
-      {{ currentDefinition ? currentDefinition.clue : "Todas as palavras foram encontradas!" }}
+      {{
+        currentDefinition
+          ? currentDefinition.clue
+          : "Todas as palavras foram encontradas!"
+      }}
     </p>
 
     <div id="game-board">
@@ -27,124 +34,132 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import SelectorsComponent from '@/components/SelectorsComponent.vue'
-import { useVocabularyStore } from '@/store/vocabularyStore'
+import { ref, onMounted } from "vue";
+import SelectorsComponent from "@/components/SelectorsComponent.vue";
+import { useVocabularyStore } from "@/store/vocabularyStore";
 
-const vocabularyStore = useVocabularyStore()
+const vocabularyStore = useVocabularyStore();
 
-const score = ref(0)
-const gameCards = ref([])         
-const currentDefinition = ref(null)
-const gameWords = ref([])         
-const availableDefinitions = ref([]) 
-const count = ref(0)
-const firstCardIndex = ref(null)
-const secondCardIndex = ref(null)
-const matchedCards = ref([])
+const score = ref(0);
+const gameCards = ref([]);
+const currentDefinition = ref(null);
+const gameWords = ref([]);
+const availableDefinitions = ref([]);
+const count = ref(0);
+const firstCardIndex = ref(null);
+const secondCardIndex = ref(null);
+const matchedCards = ref([]);
 
 function createBoard() {
-  score.value = 0
-  count.value = 0
-  matchedCards.value = []
-  
-  let filteredWords = vocabularyStore.words.filter(word => word.isActive)
+  score.value = 0;
+  count.value = 0;
+  matchedCards.value = [];
+
+  let filteredWords = vocabularyStore.words.filter((word) => word.isActive);
   if (filteredWords.length < 2) {
-    alert("Não há palavras suficientes para iniciar o jogo. Por favor, ajuste os filtros.")
-    return
+    alert(
+      "Não há palavras suficientes para iniciar o jogo. Por favor, ajuste os filtros."
+    );
+    return;
   }
-  
-  filteredWords.sort(() => Math.random() - 0.5)
-  gameWords.value = filteredWords.slice(0, 8)
-  
-  availableDefinitions.value = [...gameWords.value]
-  selectNextDefinition()
-  
-  const cards = [...gameWords.value, ...gameWords.value].map(wordObj => ({
+
+  filteredWords.sort(() => Math.random() - 0.5);
+  gameWords.value = filteredWords.slice(0, 8);
+
+  availableDefinitions.value = [...gameWords.value];
+  selectNextDefinition();
+
+  const cards = [...gameWords.value, ...gameWords.value].map((wordObj) => ({
     word: wordObj.word,
     flipped: false,
-    matched: false
-  }))
-  cards.sort(() => Math.random() - 0.5)
-  gameCards.value = cards
+    matched: false,
+  }));
+  cards.sort(() => Math.random() - 0.5);
+  gameCards.value = cards;
 }
 
 function selectNextDefinition() {
   if (availableDefinitions.value.length === 0) {
-    currentDefinition.value = null
+    currentDefinition.value = null;
   } else {
-    availableDefinitions.value.sort(() => Math.random() - 0.5)
-    currentDefinition.value = availableDefinitions.value.pop()
+    availableDefinitions.value.sort(() => Math.random() - 0.5);
+    currentDefinition.value = availableDefinitions.value.pop();
   }
 }
 
 function flipCard(index) {
-  const card = gameCards.value[index]
-  if (card.flipped || card.matched) return
+  const card = gameCards.value[index];
+  if (card.flipped || card.matched) return;
 
-  card.flipped = true
-  score.value++
-  
+  card.flipped = true;
+  score.value++;
+
   if (count.value === 0) {
-    firstCardIndex.value = index
-    count.value = 1
+    firstCardIndex.value = index;
+    count.value = 1;
   } else if (count.value === 1) {
-    secondCardIndex.value = index
-    count.value = 2
-    checkMatch()
+    secondCardIndex.value = index;
+    count.value = 2;
+    checkMatch();
   }
 }
 
 function checkMatch() {
-  const firstCard = gameCards.value[firstCardIndex.value]
-  const secondCard = gameCards.value[secondCardIndex.value]
-  
+  const firstCard = gameCards.value[firstCardIndex.value];
+  const secondCard = gameCards.value[secondCardIndex.value];
+
   if (
     firstCard.word === currentDefinition.value.word &&
     secondCard.word === currentDefinition.value.word
   ) {
-    firstCard.matched = true
-    secondCard.matched = true
-    matchedCards.value.push(firstCard, secondCard)
-    resetGuesses()
-    
+    firstCard.matched = true;
+    secondCard.matched = true;
+    matchedCards.value.push(firstCard, secondCard);
+    resetGuesses();
+
     if (matchedCards.value.length === gameCards.value.length) {
       setTimeout(() => {
-        alert(`Parabéns! Você encontrou todos os pares com ${score.value} cliques.`)
-        createBoard()
-      }, 500)
+        alert(
+          `Parabéns! Você encontrou todos os pares com ${score.value} cliques.`
+        );
+        createBoard();
+      }, 500);
     } else {
       setTimeout(() => {
-        selectNextDefinition()
-      }, 500)
+        selectNextDefinition();
+      }, 500);
     }
   } else {
     setTimeout(() => {
-      unflipCards()
-    }, 1000)
+      unflipCards();
+    }, 1000);
   }
 }
 
 function unflipCards() {
-  gameCards.value[firstCardIndex.value].flipped = false
-  gameCards.value[secondCardIndex.value].flipped = false
-  resetGuesses()
+  gameCards.value[firstCardIndex.value].flipped = false;
+  gameCards.value[secondCardIndex.value].flipped = false;
+  resetGuesses();
 }
 
 function resetGuesses() {
-  count.value = 0
-  firstCardIndex.value = null
-  secondCardIndex.value = null
+  count.value = 0;
+  firstCardIndex.value = null;
+  secondCardIndex.value = null;
 }
 
 onMounted(() => {
-  createBoard()
-})
+  createBoard();
+});
 </script>
 
 <style scoped>
 .memory-game {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #definition {
@@ -153,16 +168,14 @@ onMounted(() => {
 }
 
 #game-board {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 15px;
-  max-width: 800px;
+  display: flex;
+  width: 100%;
   margin: 0 auto;
   padding: 1rem;
 }
 
 .card {
-  width: 100px;
+  width: 25%;
   height: 120px;
   perspective: 1000px;
   cursor: pointer;
@@ -218,11 +231,13 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   #game-board {
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
   }
   .card {
-    width: 80px;
-    height: 100px;
+    width: 25%;
+    padding: 10px;
+    height: 110px;
   }
   .card-front {
     font-size: 24px;
