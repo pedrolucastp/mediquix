@@ -66,7 +66,7 @@ const gameWords = ref([]);
 const foundWords = ref([]);
 const score = ref(0);
 const statusMessage = ref("");
-let selectedCells = [];
+const selectedCells = ref([]);
 
 function updateGridDimensions() {
   console.log('updateGridDimensions', gameGrid.value)
@@ -84,7 +84,7 @@ function updateGridDimensions() {
 function createGame() {
   score.value = 0;
   statusMessage.value = "";
-  selectedCells = [];
+  selectedCells.value = [];
   foundWords.value = [];
 
   let filteredWords = vocabularyStore.words.filter(
@@ -213,23 +213,37 @@ function getRandomInt(min, max) {
 
 function handleCellClick(row, col) {
   const cellKey = `${row}-${col}`;
-  const cellAlreadySelected = selectedCells.find(
-    (cell) => cell.key === cellKey
-  );
-  if (cellAlreadySelected) {
-    selectedCells = selectedCells.filter((cell) => cell.key !== cellKey);
+  if (selectedCells.value.some((cell) => cell.key === cellKey)) {
+    selectedCells.value = selectedCells.value.filter(
+      (cell) => cell.key !== cellKey
+    );
   } else {
-    selectedCells.push({ row, col, key: cellKey });
-    if (selectedCells.length === 2) {
+    selectedCells.value.push({ row, col, key: cellKey });
+    if (selectedCells.value.length === 2) {
       checkSelectedWord();
     }
   }
 }
 
 function isCellSelected(row, col) {
-  console.log('isCellSelected', row, col)
-  return selectedCells.some((cell) => cell.row === row && cell.col === col);
+  if (selectedCells.value.length === 2) {
+    const [first, second] = selectedCells.value;
+    if (first.row === second.row && row === first.row) {
+      const startCol = Math.min(first.col, second.col);
+      const endCol = Math.max(first.col, second.col);
+      return col >= startCol && col <= endCol;
+    }
+    if (first.col === second.col && col === first.col) {
+      const startRow = Math.min(first.row, second.row);
+      const endRow = Math.max(first.row, second.row);
+      return row >= startRow && row <= endRow;
+    }
+  }
+  return selectedCells.value.some(
+    (cell) => cell.row === row && cell.col === col
+  );
 }
+
 
 let foundCells = reactive({});
 
@@ -238,9 +252,9 @@ function isCellFound(row, col) {
 }
 
 function checkSelectedWord() {
-  if (selectedCells.length !== 2) return;
+  if (selectedCells.value.length !== 2) return;
 
-  const [first, second] = selectedCells;
+  const [first, second] = selectedCells.value;
   const sameRow = first.row === second.row;
   const sameCol = first.col === second.col;
 
@@ -303,7 +317,7 @@ function checkSelectedWord() {
 }
 
 function resetSelection() {
-  selectedCells = [];
+  selectedCells.value = [];
 }
 
 onMounted(() => {
