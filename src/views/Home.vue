@@ -26,12 +26,12 @@
         title="Jogo da Forca"
         description="Adivinhe palavras médicas e teste seu conhecimento."
       /> -->
-      <!-- <GameCard
+      <GameCard
         link="/word-search"
         icon="word-search"
         title="Caça Palavras"
         description="Encontre palavras médicas escondidas na grade."
-      /> -->
+      />
     </div>
 
     <p>Acesse o vocabulário completo dos jogos:</p>
