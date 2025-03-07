@@ -1,36 +1,35 @@
 <template>
-  <footer>
-    <nav class="footer-nav">
+  <footer :class="{ dark: isDarkMode }">
+    <!-- <nav class="footer-nav">
       <router-link to="/"><h3>Início</h3></router-link>
-    </nav>
+    </nav> -->
     <div id="install-icon"></div>
     <small>&copy; MediQuix 2024. Todos os direitos reservados.</small>
   </footer>
 </template>
 
-<script>
-export default {
-  name: "FooterComponent",
-};
+<script setup>
+import { computed } from "vue";
+import { useDarkModeStore } from "../store/darkModeStore";
+
+const darkModeStore = useDarkModeStore();
+const isDarkMode = computed(() => darkModeStore.isDarkMode);
+
 </script>
 
 <style scoped>
 footer {
-  border-top: 1px solid #ddd;
-    /* background-color: var(--secondary-color); */
-    font-size: smaller;
-    /* color: #fff; */
-    padding: 4px 0;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 5px 10px 10px 10px;
-    /* position: absolute; */
-    /* bottom: 0; */
-    width: 100dvw;
-} 
+  /* border-top: 1px solid #ddd; */
+  font-size: smaller;
+  padding: 4px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 10px 10px 10px;
+  width: 100dvw;
 
+}
 
 .footer-nav {
   margin-bottom: 0.5rem;
@@ -46,4 +45,25 @@ footer {
 .footer-nav a:hover {
   color: #2ecc71;
 }
+
+#install-icon {
+  display: flex;
+  width: 100%;
+  /* padding: 10px 30px; */
+}
+
+#install-icon button {
+  padding: 10px 20px;
+  font-size: 1.2rem;
+  background-color: #2980b9;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 10px;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
 </style>

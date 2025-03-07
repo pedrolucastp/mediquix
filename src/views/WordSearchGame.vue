@@ -357,7 +357,7 @@ onUnmounted(() => {
 
 .game-grid {
   display: grid;
-  width: inherit;
+  width: 50%;
 }
 
 .grid-row {

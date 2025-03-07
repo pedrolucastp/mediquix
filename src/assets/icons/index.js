@@ -3,6 +3,7 @@ import {
   faHeart,
   faBrain,
   faBan,  
+  faGhost,
   faBook,
   faSignInAlt,
   faUserPlus,
@@ -19,11 +20,17 @@ import {
   faTimes,
   faPlus,
   faSearch,
+  faMoon,
+  faSun,
+  faFeather,
+  faBolt
+
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
   faHeart,
   faBrain,
+  faGhost,
   faBan,
   faSearch,
   faBook,
@@ -42,4 +49,8 @@ library.add(
   faTimes,
   faPlus,
   faSearch,
+  faMoon,
+  faSun,
+  faFeather,
+  faBolt
 )

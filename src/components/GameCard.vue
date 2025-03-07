@@ -1,72 +1,91 @@
 <template>
-  <router-link :to="link" class="game-card">
+  <router-link :to="link" class="game-card" :class="{ dark: isDarkMode }">
     <div class="icon-container">
       <font-awesome-icon
-        v-if="icon === 'heart'"
-        :icon="['fas', 'heart']"
-        size="3x"
-      />
-      <font-awesome-icon
-        v-else-if="icon === 'brain'"
-        :icon="['fas', 'brain']"
-        size="3x"
-      />
-      <!-- <font-awesome-icon
-        v-else-if="icon === 'lung'"
-        :icon="['fas', 'lung']"
-        size="2x"
-      /> -->
-      <font-awesome-icon
-        v-else-if="icon === 'hangman'"
-        :icon="['fas', 'ban']"
-        size="3x"
-      />
-      <font-awesome-icon
-        v-else-if="icon === 'word-search'"
-        :icon="['fas', 'search']"
-        size="3x"
-      />
-      <font-awesome-icon
-        v-else-if="icon === 'book'"
-        :icon="['fas', 'book']"
+        :icon="['fas', icon]"
         size="3x"
       />
     </div>
-    <h2>{{ title }}</h2>
-    <p>{{ description }}</p>
+    <h2 class="game-title">{{ title }}</h2>
+    <p class="game-description">{{ description }}</p>
   </router-link>
 </template>
 
-<script>
-export default {
-  name: "GameCard",
-  props: {
-    link: { type: String, required: true },
-    icon: { type: String, required: true },
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-  },
-};
+<script setup>
+import { computed } from 'vue';
+import { useDarkModeStore } from "../store/darkModeStore";
+const darkModeStore = useDarkModeStore();
+const isDarkMode = computed(() => darkModeStore.isDarkMode);
+
+// Define props
+defineProps({
+  link: String,
+  icon: String,
+  title: String,
+  description: String
+});
 </script>
 
 <style scoped>
+
 .game-card {
+  text-decoration: none;
+  /* color: inherit; */
   display: flex;
+  margin: 10px;
+  /* background: var(--background-color); */
+  /* border: 2px solid var(--primary-color); */
+  border-radius: 10px;
+  width: 250px;
+  padding: 20px;
+  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   flex-direction: column;
   align-items: center;
-  text-decoration: none;
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  transition: box-shadow 0.3s;
-  color: inherit;
+}
+
+.game-card.dark {
+  background: var(--dark-background-color);
+  color: var(--dark-text-color);
 }
 
 .game-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-10px);
+  background-color: var(--accent-color);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
+
+.game-title {
+  margin-top: 10px;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.game-description {
+  font-size: 16px;
+}
+
 
 .icon-container {
   margin-bottom: 0.5rem;
+}
+
+@media only screen and (max-width: 768px) {
+  .game-card {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    width: 100%;
+  }
+
+  .game-title {
+  font-size: 16px;
+}
+
+  .game-description { 
+    font-size: 14px;
+  }
+
+
 }
 </style>

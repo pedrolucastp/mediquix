@@ -1,29 +1,25 @@
 <template>
   <HeaderComponent />
-  <main>
-    <router-view />
-  </main>
+  <MainComponent />
   <FooterComponent />
 </template>
 
-<script>
+<script setup>
 import HeaderComponent from "./components/HeaderComponent.vue";
+import MainComponent from "./components/MainComponent.vue";
 import FooterComponent from "./components/FooterComponent.vue";
-export default {
-  components: {
-    HeaderComponent,
-    FooterComponent,
-  },
-};
 </script>
 
 <style>
 :root {
-  --primary-color: #2980b9;
-  --secondary-color: #2c3e50;
+  --primary-color: #3498db;
+  --secondary-color: #8e44ad;
   --accent-color: #e74c3c;
-  --background-color: #f0f8ff;
+  --background-color: #ecf0f1;
   --font-family: "Poppins", sans-serif;
+  --gradient: linear-gradient(135deg, #3498db, #8e44ad);
+  --dark-background-color: #2c3e50;
+  --dark-text-color: #ecf0f1;
   --select-background: #ffffff;
   --select-border: 2px solid #2980b9;
   --select-border-radius: 5px;
@@ -42,24 +38,20 @@ export default {
 
 #app {
   font-family: var(--font-family);
-  background-color: var(--background-color);
+  background: var(--gradient);
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100dvh;
-  width: 100dvw;
+  height: 100vh;
+  width: 100vw;
 }
 
-main {
-    text-align: center;
-    padding: 20px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: hidden;
-    height: 100%;
+.dark {
+  background-color: var(--dark-background-color);
+  color: var(--dark-text-color);
+  transition: background-color 0.3s, color 0.3s;
+
 }
 </style>

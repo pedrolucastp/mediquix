@@ -103,7 +103,7 @@ function showQuestion() {
     options.value = generateOptions(currentQuestion.value.word);
     buttonColors.value = options.value.map(() => "");
     timeLeft.value = 7;
-    timerDisplay.value = "7.00";
+    timerDisplay.value = "7";
     startTimer();
   }
 }
