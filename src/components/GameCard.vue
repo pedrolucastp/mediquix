@@ -30,62 +30,102 @@ defineProps({
 
 .game-card {
   text-decoration: none;
-  /* color: inherit; */
   display: flex;
-  margin: 10px;
-  /* background: var(--background-color); */
-  /* border: 2px solid var(--primary-color); */
-  border-radius: 10px;
-  width: 250px;
-  padding: 20px;
-  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  width: 280px;
+  padding: var(--spacing-xl);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
   flex-direction: column;
   align-items: center;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  transition: height 0.3s ease;
 }
 
 .game-card.dark {
-  background: var(--dark-background-color);
+  background: var(--dark-surface-color);
   color: var(--dark-text-color);
+  border-color: var(--dark-border-color);
 }
 
 .game-card:hover {
-  transform: translateY(-10px);
-  background-color: var(--accent-color);
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.game-card:hover::before {
+  height: 6px;
 }
 
 .game-title {
-  margin-top: 10px;
+  margin: var(--spacing-md) 0 var(--spacing-sm);
   font-weight: 600;
-  font-size: 18px;
+  font-size: 1.25rem;
+  color: var(--primary-color);
 }
 
 .game-description {
-  font-size: 16px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.5;
 }
 
-
 .icon-container {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
+  color: var(--primary-color);
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.game-card:hover .icon-container {
+  transform: scale(1.1);
+  color: var(--accent-color);
+}
+
+.dark .game-title {
+  color: var(--dark-primary-color);
+}
+
+.dark .game-description {
+  color: var(--dark-text-secondary);
+}
+
+.dark .icon-container {
+  color: var(--dark-primary-color);
+}
+
+.dark .game-card:hover .icon-container {
+  color: var(--dark-accent-color);
 }
 
 @media only screen and (max-width: 768px) {
   .game-card {
-    text-decoration: none;
-    color: inherit;
-    display: flex;
     width: 100%;
+    margin: var(--spacing-sm);
+    padding: var(--spacing-lg);
   }
 
   .game-title {
-  font-size: 16px;
-}
-
-  .game-description { 
-    font-size: 14px;
+    font-size: 1.1rem;
   }
 
-
+  .game-description { 
+    font-size: 0.9rem;
+  }
 }
 </style>

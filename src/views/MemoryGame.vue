@@ -158,40 +158,53 @@ onMounted(() => {
   text-align: center;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
 }
 
 #definition {
-  font-size: 1.2rem;
-  margin: 1rem 0;
+  font-size: 1.25rem;
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-color);
+  line-height: 1.6;
+  border: 1px solid var(--border-color);
 }
 
 #game-board {
-  display: flex;
-  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
   margin: 0 auto;
-  padding: 1rem;
+  max-width: 900px;
 }
 
 .card {
-  width: 25%;
-  height: 120px;
+  aspect-ratio: 3/4;
   perspective: 1000px;
   cursor: pointer;
-  position: relative;
 }
 
 .card-inner {
+  position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
-.card.flipped .card-inner,
-.card.matched .card-inner {
+.card.flipped .card-inner {
   transform: rotateY(180deg);
+}
+
+.card.matched .card-inner {
+  transform: rotateY(180deg) scale(0.95);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-front,
@@ -200,50 +213,87 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  border-radius: 5px;
-}
-
-.card-front {
-  background-color: #ecf0f1;
-  border: 2px solid #bdc3c7;
-  box-shadow: 0px 0px 20px -10px;
-  transform: rotate(-15deg);
-}
-
-.card-back {
-  background-color: var(--select-backgound);
-  border: 1px solid #bdc3c7;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-color);
-  padding: 5px;
-  font-size: 14px;
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.card-front {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  font-size: 1.5rem;
+  transform: rotateY(0deg);
+}
+
+.card-back {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  transform: rotateY(180deg);
   text-align: center;
-  transform: rotateY(180deg) rotate(-15deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4;
+}
+
+.card:hover .card-front:not(.matched) {
+  box-shadow: var(--shadow-md);
+  transform: translateZ(10px);
 }
 
 #score {
-  font-size: 18px;
+  font-size: 1.25rem;
   font-weight: 600;
-  margin-top: 1rem;
+  margin-top: var(--spacing-lg);
+  color: var(--primary-color);
 }
 
+/* Dark mode styles */
+:deep(.dark) #definition {
+  background-color: var(--dark-surface-color);
+  color: var(--dark-text-color);
+  border-color: var(--dark-border-color);
+}
+
+:deep(.dark) .card-back {
+  background-color: var(--dark-surface-color);
+  color: var(--dark-text-color);
+  border-color: var(--dark-border-color);
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
+  .memory-game {
+    padding: var(--spacing-sm);
+  }
+
   #game-board {
-    display: flex;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
   }
-  .card {
-    width: 25%;
-    padding: 10px;
-    height: 110px;
+
+  #definition {
+    font-size: 1.1rem;
+    margin: var(--spacing-md) 0;
   }
+
   .card-front {
-    font-size: 24px;
+    font-size: 1.25rem;
   }
+
   .card-back {
-    font-size: 12px;
+    font-size: 0.8rem;
+  }
+
+  #score {
+    font-size: 1.1rem;
   }
 }
 </style>
