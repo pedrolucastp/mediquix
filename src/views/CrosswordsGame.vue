@@ -7,10 +7,53 @@
     />
 
     <div id="crossword-container">
-      <div id="crossword"></div>
+      <div id="crossword" :style="gridStyle">
+        <template v-for="row in gridRows" :key="row">
+          <div
+            v-for="col in gridCols"
+            :key="`${row}-${col}`"
+            class="cell"
+            :class="{ empty: !getCell(row, col) }"
+          >
+            <template v-if="getCell(row, col)">
+              <!-- <span v-if="isStartingCell(row, col)" class="clue-number">
+                {{ getWordNumber(row, col) }}
+              </span> -->
+              <input
+                :ref="el => cellRefs[`${row}-${col}`] = el"
+                maxLength="1"
+                :data-row="row"
+                :data-col="col"
+                :data-correct="getCell(row, col)"
+                :data-words="getCellWords(row, col)"
+                :class="{
+                  'highlighted': isHighlighted(row, col),
+                  'highlighted-intersection': isIntersectionHighlighted(row, col)
+                }"
+                @input="handleInput"
+                @focus="handleInputFocus"
+                @keydown="handleKeyDown"
+                @click="handleCellClick(row, col)"
+              />
+              
+            </template>
+          </div>
+        </template>
+      </div>
+
       <div id="clues">
         <h2>Dicas</h2>
-        <ul id="clue-list"></ul>
+        <ul id="clue-list">
+          <li
+            v-for="word in placedWords"
+            :key="word.number"
+            :class="{ 'highlighted': isClueHighlighted(word.number) }"
+            @click="highlightWord(word)"
+          >
+            {{ word.number }}. {{ word.clue }}
+            ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
+          </li>
+        </ul>
       </div>
     </div>
     
@@ -19,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useVocabularyStore } from '@/store/vocabularyStore'
 import { useSettingsStore } from '@/store/userSettings'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
@@ -35,12 +78,218 @@ const grid = ref([])
 const placedWords = ref([])
 const currentWord = ref(null)
 const currentDirection = ref('across')
+const highlightedCells = ref(new Set())
+const highlightedIntersections = ref(new Set())
+const highlightedClue = ref(null)
+const cellRefs = reactive({})
 
 // Stores
 const vocabularyStore = useVocabularyStore()
 const settingsStore = useSettingsStore()
 
-// Functions from the original code, adapted for Vue
+// Computed
+const gridStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${GRID_COLS}, 40px)`,
+  gridTemplateRows: `repeat(${GRID_ROWS}, 40px)`
+}))
+
+const gridRows = computed(() => Array.from({ length: GRID_ROWS }, (_, i) => i))
+const gridCols = computed(() => Array.from({ length: GRID_COLS }, (_, i) => i))
+
+// Methods
+function getCell(row, col) {
+  return grid.value[row]?.[col] || null
+}
+
+function getCellWords(row, col) {
+  const cellWords = placedWords.value.filter(word => {
+    return word.positions.some(pos => pos.row === row && pos.col === col)
+  })
+  return JSON.stringify(cellWords.map(word => ({
+    wordNumber: word.number,
+    direction: word.direction
+  })))
+}
+
+function isStartingCell(row, col) {
+  return placedWords.value.some(word => {
+    // Check if this cell is the start of any word
+    if (word.row === row && word.col === col) {
+      return true;
+    }
+    return false;
+  })
+}
+
+function getWordNumber(row, col) {
+  const word = placedWords.value.find(w => w.row === row && w.col === col)
+  return word?.number
+}
+
+function isHighlighted(row, col) {
+  return highlightedCells.value.has(`${row}-${col}`)
+}
+
+function isIntersectionHighlighted(row, col) {
+  return highlightedIntersections.value.has(`${row}-${col}`)
+}
+
+function isClueHighlighted(number) {
+  return highlightedClue.value === number
+}
+
+function highlightWord(wordObj) {
+  clearHighlights()
+  
+  // Only highlight the word cells
+  wordObj.positions.forEach(pos => {
+    highlightedCells.value.add(`${pos.row}-${pos.col}`)
+  })
+  
+  highlightedClue.value = wordObj.number
+}
+
+function handleCellClick(row, col) {
+  const cellWords = JSON.parse(getCellWords(row, col))
+  if (cellWords.length > 0) {
+    const word = placedWords.value.find(w => w.number === cellWords[0].wordNumber)
+    if (word) {
+      highlightWord(word)
+    }
+  }
+}
+
+function clearHighlights() {
+  highlightedCells.value.clear()
+  highlightedIntersections.value.clear()
+  highlightedClue.value = null
+}
+
+// Game management functions
+function normalizeString(str) {
+  return str.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim()
+}
+
+function handleInputFocus(event) {
+  const input = event.target
+  const cellWords = JSON.parse(input.dataset.words || '[]')
+  if (cellWords && cellWords.length > 0) {
+    currentWord.value = cellWords[0]
+    currentDirection.value = currentWord.value.direction
+    
+    // Highlight word when focusing input
+    const word = placedWords.value.find(w => w.number === cellWords[0].wordNumber)
+    if (word) {
+      highlightWord(word)
+    }
+  }
+}
+
+function handleInput(event) {
+  const input = event.target
+  input.value = input.value.toUpperCase()
+  
+  // Allow accented characters but normalize for comparison
+  const normalizedValue = normalizeString(input.value)
+  const normalizedCorrect = normalizeString(input.dataset.correct)
+  
+  if (normalizedValue === normalizedCorrect) {
+    input.style.backgroundColor = '#e6ffe6'
+  } else {
+    input.style.backgroundColor = 'transparent'
+  }
+  
+  moveToNextInput(input)
+}
+
+function moveToNextInput(currentInput) {
+  const currentRow = parseInt(currentInput.dataset.row)
+  const currentCol = parseInt(currentInput.dataset.col)
+  
+  if (!currentWord.value || !currentDirection.value) return
+
+  let nextRow = currentRow
+  let nextCol = currentCol
+
+  if (currentDirection.value === 'across') {
+    nextCol++
+  } else {
+    nextRow++
+  }
+
+  const nextInput = cellRefs[`${nextRow}-${nextCol}`]
+  if (nextInput && isInputPartOfCurrentWord(nextInput)) {
+    nextInput.focus()
+  }
+}
+
+function moveToPreviousInput(currentInput) {
+  const currentRow = parseInt(currentInput.dataset.row)
+  const currentCol = parseInt(currentInput.dataset.col)
+  
+  if (!currentWord.value || !currentDirection.value) return
+
+  let prevRow = currentRow
+  let prevCol = currentCol
+
+  if (currentDirection.value === 'across') {
+    prevCol--
+  } else {
+    prevRow--
+  }
+
+  const prevInput = cellRefs[`${prevRow}-${prevCol}`]
+  if (prevInput && isInputPartOfCurrentWord(prevInput)) {
+    prevInput.focus()
+  }
+}
+
+function handleKeyDown(event) {
+  const input = event.target
+  if (event.key === 'Backspace' && !input.value) {
+    moveToPreviousInput(input)
+  }
+}
+
+function isInputPartOfCurrentWord(input) {
+  const cellWords = JSON.parse(input.dataset.words || '[]')
+  if (cellWords && currentWord.value) {
+    return cellWords.some(
+      word =>
+        word.wordNumber === currentWord.value.wordNumber &&
+        word.direction === currentWord.value.direction
+    )
+  }
+  return false
+}
+
+function checkAnswers() {
+  let allCorrect = true
+
+  for (const key in cellRefs) {
+    const input = cellRefs[key]
+    const userInput = normalizeString(input.value || '')
+    const correctInput = normalizeString(input.dataset.correct)
+    if (userInput === correctInput) {
+      input.style.backgroundColor = '#b2ffb2'
+    } else {
+      input.style.backgroundColor = '#ffb2b2'
+      allCorrect = false
+    }
+  }
+
+  if (allCorrect) {
+    alert('Parabéns! Você completou o nível com sucesso.')
+    currentLevel.value++
+    startGame()
+  } else {
+    alert('Existem erros em suas respostas. Por favor, verifique e tente novamente.')
+  }
+}
+
 function initializeGrid() {
   grid.value = []
   for (let i = 0; i < GRID_ROWS; i++) {
@@ -52,10 +301,8 @@ function initializeGrid() {
 function getWordsForLevel(level) {
   const wordsPerLevel = 4
   
-  // Filter words based on active settings
   let filteredWords = vocabularyStore.words.filter(wordObj => wordObj.isActive)
 
-  // If not enough words, reset and notify
   if (filteredWords.length < wordsPerLevel) {
     alert('Não há palavras suficientes para as configurações selecionadas. O jogo será reiniciado.')
     usedWordIndices.value = []
@@ -63,7 +310,6 @@ function getWordsForLevel(level) {
     return getWordsForLevel(currentLevel.value)
   }
 
-  // Select random words that haven't been used
   const wordsForLevel = []
   for (let i = 0; i < wordsPerLevel; i++) {
     const randomIndex = Math.floor(Math.random() * filteredWords.length)
@@ -74,50 +320,6 @@ function getWordsForLevel(level) {
   return wordsForLevel
 }
 
-// Rest of the original functions, adapted for Vue reactivity
-function generateCrossword(wordList) {
-  initializeGrid()
-
-  const sortedWords = [...wordList].sort((a, b) => b.word.length - a.word.length)
-
-  // Place first word in center horizontally
-  const firstWord = sortedWords[0]
-  const startRow = Math.floor(GRID_ROWS / 2)
-  const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2)
-
-  const positions = placeWord(firstWord.word, startRow, startCol, 'across')
-  placedWords.value.push({
-    word: firstWord.word,
-    clue: firstWord.clue,
-    row: startRow,
-    col: startCol,
-    direction: 'across',
-    number: 1,
-    positions: positions
-  })
-
-  let wordNumber = 2
-
-  for (let i = 1; i < sortedWords.length; i++) {
-    const wordObj = sortedWords[i]
-    const placed = tryPlaceWord(wordObj.word)
-    if (placed) {
-      const positions = placeWord(wordObj.word, placed.row, placed.col, placed.direction)
-      placedWords.value.push({
-        word: wordObj.word,
-        clue: wordObj.clue,
-        row: placed.row,
-        col: placed.col,
-        direction: placed.direction,
-        number: wordNumber,
-        positions: positions
-      })
-      wordNumber++
-    }
-  }
-}
-
-// Implement all the helper functions from the original code
 function placeWord(word, row, col, direction) {
   let positions = []
   if (direction === 'across') {
@@ -139,10 +341,10 @@ function tryPlaceWord(word) {
     for (let i = 0; i < word.length; i++) {
       const letter = word[i]
       const positions = getLetterPositions(existingWord.word, letter)
+      
       for (let pos of positions) {
         const crossRow = existingWord.row + (existingWord.direction === 'down' ? pos : 0)
         const crossCol = existingWord.col + (existingWord.direction === 'across' ? pos : 0)
-
         const startRow = crossRow - (existingWord.direction === 'down' ? 0 : i)
         const startCol = crossCol - (existingWord.direction === 'across' ? 0 : i)
         const direction = existingWord.direction === 'across' ? 'down' : 'across'
@@ -208,269 +410,171 @@ function isPartOfWord(row, col) {
   })
 }
 
-function createCrossword() {
-  const crossword = document.getElementById('crossword')
-  crossword.innerHTML = ''
+function generateCrossword(wordList) {
+  initializeGrid()
 
-  let minRow = GRID_ROWS, maxRow = 0, minCol = GRID_COLS, maxCol = 0
-  for (let i = 0; i < GRID_ROWS; i++) {
-    for (let j = 0; j < GRID_COLS; j++) {
-      if (grid.value[i][j]) {
-        if (i < minRow) minRow = i
-        if (i > maxRow) maxRow = i
-        if (j < minCol) minCol = j
-        if (j > maxCol) maxCol = j
-      }
-    }
-  }
+  const sortedWords = [...wordList].sort((a, b) => b.word.length - a.word.length)
 
-  let cellMap = {}
-  placedWords.value.forEach(wordObj => {
-    wordObj.positions.forEach(pos => {
-      const key = `${pos.row},${pos.col}`
-      if (!cellMap[key]) cellMap[key] = []
-      cellMap[key].push({
-        wordNumber: wordObj.number,
-        direction: wordObj.direction,
-        word: wordObj.word
+  // Place first word in center horizontally
+  const firstWord = sortedWords[0]
+  const startRow = Math.floor(GRID_ROWS / 2)
+  const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2)
+
+  const positions = placeWord(firstWord.word, startRow, startCol, 'across')
+  placedWords.value.push({
+    word: firstWord.word,
+    clue: firstWord.clue,
+    row: startRow,
+    col: startCol,
+    direction: 'across',
+    number: 1,
+    positions: positions
+  })
+
+  let wordNumber = 2
+
+  for (let i = 1; i < sortedWords.length; i++) {
+    const wordObj = sortedWords[i]
+    const placed = tryPlaceWord(wordObj.word)
+    if (placed) {
+      const positions = placeWord(wordObj.word, placed.row, placed.col, placed.direction)
+      placedWords.value.push({
+        word: wordObj.word,
+        clue: wordObj.clue,
+        row: placed.row,
+        col: placed.col,
+        direction: placed.direction,
+        number: wordNumber,
+        positions: positions
       })
-    })
-  })
-
-  for (let i = minRow; i <= maxRow; i++) {
-    for (let j = minCol; j <= maxCol; j++) {
-      const cell = document.createElement('div')
-      cell.classList.add('cell')
-      if (grid.value[i][j]) {
-        const input = document.createElement('input')
-        input.maxLength = 1
-        input.dataset.row = i
-        input.dataset.col = j
-        input.dataset.correct = grid.value[i][j]
-
-        const key = `${i},${j}`
-        const cellWords = cellMap[key]
-        if (cellWords) {
-          input.dataset.words = JSON.stringify(cellWords)
-        }
-
-        cell.appendChild(input)
-
-        const wordAtPosition = placedWords.value.find(
-          wordObj => wordObj.positions[0].row === i && wordObj.positions[0].col === j
-        )
-        if (wordAtPosition) {
-          const clueNumber = document.createElement('span')
-          clueNumber.classList.add('clue-number')
-          clueNumber.textContent = wordAtPosition.number
-          cell.appendChild(clueNumber)
-        }
-      } else {
-        cell.style.borderColor = 'white'
-      }
-      crossword.appendChild(cell)
+      wordNumber++
     }
-  }
-
-  crossword.style.gridTemplateColumns = `repeat(${maxCol - minCol + 1}, 30px)`
-  crossword.style.gridTemplateRows = `repeat(${maxRow - minRow + 1}, 30px)`
-
-  const clueList = document.getElementById('clue-list')
-  clueList.innerHTML = ''
-  for (let wordObj of placedWords.value) {
-    const listItem = document.createElement('li')
-    listItem.textContent = `${wordObj.number}. ${wordObj.clue} (${wordObj.direction === 'across' ? 'Horizontal' : 'Vertical'})`
-    listItem.title = wordObj.word
-    clueList.appendChild(listItem)
-  }
-
-  // Add events to inputs
-  const inputs = crossword.querySelectorAll('input')
-  inputs.forEach(input => {
-    input.addEventListener('focus', handleInputFocus)
-    input.addEventListener('input', handleInput)
-    input.addEventListener('keydown', handleKeyDown)
-  })
-}
-
-function handleInputFocus(event) {
-  const input = event.target
-  const cellWords = JSON.parse(input.dataset.words)
-  if (cellWords && cellWords.length > 0) {
-    currentWord.value = cellWords[0]
-    currentDirection.value = currentWord.value.direction
-  }
-}
-
-function handleInput(event) {
-  const input = event.target
-  input.value = input.value.toUpperCase()
-  moveToNextInput(input)
-}
-
-function moveToNextInput(currentInput) {
-  const currentRow = parseInt(currentInput.dataset.row)
-  const currentCol = parseInt(currentInput.dataset.col)
-
-  let nextRow = currentRow
-  let nextCol = currentCol
-
-  while (true) {
-    if (currentDirection.value === 'across') {
-      nextCol += 1
-    } else if (currentDirection.value === 'down') {
-      nextRow += 1
-    } else {
-      break
-    }
-
-    const nextInput = document.querySelector(
-      `input[data-row='${nextRow}'][data-col='${nextCol}']`
-    )
-
-    if (!nextInput) {
-      break
-    }
-
-    if (isInputPartOfCurrentWord(nextInput)) {
-      nextInput.focus()
-      break
-    }
-  }
-}
-
-function isInputPartOfCurrentWord(input) {
-  const cellWords = JSON.parse(input.dataset.words)
-  if (cellWords) {
-    return cellWords.some(
-      word =>
-        word.wordNumber === currentWord.value.wordNumber &&
-        word.direction === currentWord.value.direction
-    )
-  }
-  return false
-}
-
-function handleKeyDown(event) {
-  const input = event.target
-  if (event.key === 'Backspace' && !input.value) {
-    moveToPreviousInput(input)
-  }
-}
-
-function moveToPreviousInput(currentInput) {
-  const currentRow = parseInt(currentInput.dataset.row)
-  const currentCol = parseInt(currentInput.dataset.col)
-
-  let prevRow = currentRow
-  let prevCol = currentCol
-
-  while (true) {
-    if (currentDirection.value === 'across') {
-      prevCol -= 1
-    } else if (currentDirection.value === 'down') {
-      prevRow -= 1
-    } else {
-      break
-    }
-
-    const prevInput = document.querySelector(
-      `input[data-row='${prevRow}'][data-col='${prevCol}']`
-    )
-
-    if (!prevInput) {
-      break
-    }
-
-    if (isInputPartOfCurrentWord(prevInput)) {
-      prevInput.focus()
-      break
-    }
-  }
-}
-
-function checkAnswers() {
-  const inputs = document.querySelectorAll('input')
-  let allCorrect = true
-
-  inputs.forEach(input => {
-    const userInput = input.value.toUpperCase()
-    const correctInput = input.dataset.correct.toUpperCase()
-    if (userInput === correctInput) {
-      input.style.backgroundColor = '#b2ffb2'
-    } else {
-      input.style.backgroundColor = '#ffb2b2'
-      allCorrect = false
-    }
-  })
-
-  if (allCorrect) {
-    alert('Parabéns! Você completou o nível com sucesso.')
-    currentLevel.value++
-    startGame()
-  } else {
-    alert('Existem erros em suas respostas. Por favor, verifique e tente novamente.')
   }
 }
 
 function startGame() {
   const wordsForLevel = getWordsForLevel(currentLevel.value)
   generateCrossword(wordsForLevel)
-  createCrossword()
+  clearHighlights()
 }
 
-// Lifecycle hooks
+// Initialization
 onMounted(() => {
   startGame()
 })
 </script>
 
 <style scoped>
+
 #crossword-container {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: flex-start;
-  flex-wrap: wrap;
+  gap: var(--spacing-lg, 2rem);
+  padding: var(--spacing-md, 1rem);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 #crossword {
   display: grid;
-  margin: 20px;
+  gap: 0;
+  margin: 0 auto;
   width: max-content;
+  padding: 1rem;
+  background: var(--surface-color, #fff);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  overflow: auto;
+}
+
+#clues {
+  position: sticky;
+  top: var(--spacing-md, 1rem);
+  width: 300px;
+  flex-shrink: 0;
+  padding: var(--spacing-md, 1rem);
+  background: var(--surface-color, #fff);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-sm);
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  #crossword-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #crossword {
+    width: 100%;
+    order: 2;
+  }
+
+  #clues {
+    width: 100%;
+    position: relative;
+    top: 0;
+    order: 1;
+    max-height: none;
+  }
 }
 
 .cell {
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--border-color);
-  width: 30px;
-  height: 30px;
-  text-align: center;
-  vertical-align: middle;
-  position: relative;
+  background-color: var(--secondary-color);
+}
+
+.empty {
+  border: none;
+  background-color: transparent;
 }
 
 .cell input {
   width: 100%;
   height: 100%;
   text-align: center;
-  font-size: 18px;
+  font-size: 16px;
+  padding: 0;
+  margin: 0;
   border: none;
   outline: none;
-  background-color: transparent;
-  color: var(--text-color);
+  background: transparent;
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+
+.cell:hover {
+  background-color: var(--hover-color, rgba(0, 0, 0, 0.05));
+}
+
+.cell input:focus {
+  background-color: var(--focus-color, rgba(var(--primary-rgb, 46, 204, 113), 0.1));
+}
+
+.cell input.highlighted {
+  background-color: var(--highlight-color, rgba(255, 255, 0, 0.3));
+}
+
+.cell input.highlighted-intersection {
+  background-color: var(--intersection-highlight-color, rgba(0, 255, 255, 0.3));
 }
 
 .cell .clue-number {
-  position: absolute;
-  top: 0;
+  position: relative;
+  top: -8px;
   left: 2px;
-  font-size: 10px;
+  font-size: var(--clue-number-size, 0.75rem);
   font-weight: bold;
   color: var(--text-color);
-}
-
-#clues {
-  max-width: 300px;
-  text-align: left;
 }
 
 #clues h2 {
@@ -491,6 +595,10 @@ onMounted(() => {
   color: var(--text-color);
 }
 
+#clue-list li.highlighted {
+  background-color: var(--highlight-color, rgba(255, 255, 0, 0.3));
+}
+
 #check-button {
   margin-top: 20px;
   padding: 10px 20px;
@@ -506,23 +614,14 @@ onMounted(() => {
   background-color: var(--accent-color);
 }
 
-@media (max-width: 768px) {
-  #crossword-container {
-    flex-direction: column;
-    align-items: center;
-    flex-wrap: nowrap;
+@media (max-width: 480px) {
+  .cell {
+    width: 24px;
+    height: 24px;
   }
-
-  #clues {
-    text-align: center;
-    width: 100%;
-  }
-
-  #crossword {
-    margin: 10px;
-    width: 100%;
-    padding: 20px;
-    overflow: auto;
+  
+  .cell input {
+    font-size: 14px;
   }
 }
 
@@ -530,8 +629,24 @@ onMounted(() => {
   border-color: var(--dark-border-color);
 }
 
+:deep(.dark) .cell:hover {
+  background-color: var(--dark-hover-color, rgba(255, 255, 255, 0.1));
+}
+
 :deep(.dark) .cell input {
   color: var(--dark-text-color);
+}
+
+:deep(.dark) .cell input:focus {
+  background-color: var(--dark-focus-color, rgba(var(--dark-primary-rgb, 46, 204, 113), 0.2));
+}
+
+:deep(.dark) .cell input.highlighted {
+  background-color: var(--dark-highlight-color, rgba(255, 255, 0, 0.3));
+}
+
+:deep(.dark) .cell input.highlighted-intersection {
+  background-color: var(--dark-intersection-highlight-color, rgba(0, 255, 255, 0.3));
 }
 
 :deep(.dark) .cell .clue-number {
@@ -544,5 +659,9 @@ onMounted(() => {
 
 :deep(.dark) #clue-list li {
   color: var(--dark-text-color);
+}
+
+:deep(.dark) #clue-list li.highlighted {
+  background-color: var(--dark-highlight-color, rgba(255, 255, 0, 0.3));
 }
 </style>
