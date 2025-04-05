@@ -15,18 +15,16 @@
     </p>
 
     <div id="game-board">
-      <div
+      <GameCardFlip
         v-for="(card, index) in gameCards"
         :key="index"
-        class="card"
-        :class="{ flipped: card.flipped, matched: card.matched }"
+        :flipped="card.flipped"
+        :matched="card.matched"
+        :disabled="count === 2"
         @click="flipCard(index)"
       >
-        <div class="card-inner">
-          <div class="card-front"></div>
-          <div class="card-back">{{ card.word }}</div>
-        </div>
-      </div>
+        <template #back>{{ card.word }}</template>
+      </GameCardFlip>
     </div>
 
     <p id="score">Pontuação: {{ score }}</p>
@@ -36,6 +34,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
+import GameCardFlip from "@/components/game/GameCardFlip.vue";
 import { useVocabularyStore } from "@/store/vocabularyStore";
 
 const vocabularyStore = useVocabularyStore();
@@ -173,6 +172,9 @@ onMounted(() => {
   color: var(--text-color);
   line-height: 1.6;
   border: 1px solid var(--border-color);
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 #game-board {
@@ -181,70 +183,33 @@ onMounted(() => {
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   margin: 0 auto;
-  max-width: 900px;
-}
-
-.card {
-  aspect-ratio: 3/4;
+  width: 100%;
+  max-width: 1000px;
   perspective: 1000px;
-  cursor: pointer;
 }
 
-.card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
+#game-board :deep(.card) {
+  transform: rotate(-6deg);
+  transition: transform 0.3s ease;
+  aspect-ratio: 3/4;
 }
 
-.card.flipped .card-inner {
-  transform: rotateY(180deg);
+#game-board :deep(.card:hover) {
+  transform: rotate(-6deg);
 }
 
-.card.matched .card-inner {
-  transform: rotateY(180deg) scale(0.95);
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+/* #game-board :deep(.card:hover) {
+  transform:  translateY(-5px);
+} */
+
+#game-board :deep(.card.flipped) {
+  transform: rotate(6deg);
 }
 
-.card-front,
-.card-back {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
-}
-
-.card-front {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-  font-size: 1.5rem;
-  transform: rotateY(0deg);
-}
-
-.card-back {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  color: var(--text-color);
-  font-size: 0.9rem;
-  transform: rotateY(180deg);
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+#game-board :deep(.card-back) {
+  font-size: 1.1rem;
   line-height: 1.4;
-}
-
-.card:hover .card-front:not(.matched) {
-  box-shadow: var(--shadow-md);
-  transform: translateZ(10px);
+  padding: var(--spacing-md);
 }
 
 #score {
@@ -261,12 +226,6 @@ onMounted(() => {
   border-color: var(--dark-border-color);
 }
 
-:deep(.dark) .card-back {
-  background-color: var(--dark-surface-color);
-  color: var(--dark-text-color);
-  border-color: var(--dark-border-color);
-}
-
 /* Responsive styles */
 @media (max-width: 768px) {
   .memory-game {
@@ -274,22 +233,20 @@ onMounted(() => {
   }
 
   #game-board {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-sm);
     padding: var(--spacing-sm);
+    width: 100%;
   }
 
   #definition {
     font-size: 1.1rem;
-    margin: var(--spacing-md) 0;
+    margin: var(--spacing-md) var(--spacing-sm);
+    padding: var(--spacing-sm);
   }
 
-  .card-front {
-    font-size: 1.25rem;
-  }
-
-  .card-back {
-    font-size: 0.8rem;
+  #game-board :deep(.card-back) {
+    font-size: 0.9rem;
   }
 
   #score {

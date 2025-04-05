@@ -19,15 +19,13 @@ const isDarkMode = computed(() => darkModeStore.isDarkMode);
 
 <style scoped>
 footer {
-  /* border-top: 1px solid #ddd; */
   font-size: smaller;
   padding: 4px 0;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 5px 10px 10px 10px;
-  width: 100dvw;
+  width: 100%;
 
 }
 

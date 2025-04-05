@@ -80,7 +80,7 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md);
+  /* padding: var(--spacing-md); */
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
 }
@@ -96,7 +96,7 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   color: var(--text-color);
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) rotate(-12deg);
   font-size: 0.9rem;
   text-align: center;
 }

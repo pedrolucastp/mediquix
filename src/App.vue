@@ -11,6 +11,12 @@ import FooterComponent from "./components/FooterComponent.vue";
 </script>
 
 <style>
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
 :root {
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
   
@@ -52,6 +58,10 @@ import FooterComponent from "./components/FooterComponent.vue";
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
+}
+
+body {
+
 }
 
 #app {

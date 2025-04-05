@@ -23,8 +23,8 @@ import {
   faMoon,
   faSun,
   faFeather,
-  faBolt
-
+  faBolt,
+  faQuestion
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -52,5 +52,6 @@ library.add(
   faMoon,
   faSun,
   faFeather,
-  faBolt
+  faBolt,
+  faQuestion
 )
