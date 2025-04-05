@@ -106,6 +106,7 @@ input, select {
   color: var(--text-color);
   outline: none;
   transition: border-color 0.2s ease;
+  width: 100%;
 }
 
 input:focus, select:focus {
