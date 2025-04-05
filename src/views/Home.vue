@@ -14,12 +14,12 @@
         title="Jogo de Memória"
         description="Teste sua memória com termos médicos."
       />
-      <!-- <GameCard
+      <GameCard
         link="/crosswords"
-        icon="brain"
+        icon="pen-to-square"
         title="Palavras Cruzadas"
         description="Desafie seu conhecimento com palavras cruzadas médicas."
-      /> -->
+      />
       <GameCard
         link="/hangman"
         icon="ghost"

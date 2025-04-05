@@ -16,21 +16,21 @@ import { useSettingsStore } from '@/store/userSettings'
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    initialized: false,
+    initialized: false
   }),
   getters: {
     userSettings: (state) =>
       (state.user && state.user.settings ? state.user.settings : null)
   },
   actions: {
-    initAuthState() {
-      initAuthState((user) => {
+    async initAuthState() {
+      await initAuthState((user) => {
         this.user = user
-        this.initialized = true
         if (user) {
           this.fetchUserSettings()
         }
       })
+      this.initialized = true
     },
     async signup(email, password) {
       try {

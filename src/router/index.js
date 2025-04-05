@@ -5,6 +5,7 @@ import MemoryGame from '../views/MemoryGame.vue'
 import WordSearchGame from '../views/WordSearchGame.vue'
 import HangmanGame from '../views/HangmanGame.vue'
 import MyVocabulary from '../views/MyVocabulary.vue'
+import CrosswordsGame from '../views/CrosswordsGame.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
@@ -13,6 +14,7 @@ const routes = [
   { path: '/word-search', name: 'WordSearchGame', component: WordSearchGame },
   { path: '/hangman', name: 'HangmanGame', component: HangmanGame },
   { path: '/my-vocabulary', name: 'MyVocabulary', component: MyVocabulary },
+  { path: '/crosswords', name: 'CrosswordsGame', component: CrosswordsGame },
 ]
 
 const router = createRouter({

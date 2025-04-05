@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -57,14 +56,18 @@ setPersistence(auth, browserLocalPersistence)
 
 
 const initAuthState = (callback) => {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      console.log("User is logged in.");
-      callback(user);
-    } else {
-      console.log("No user is logged in.");
-      callback(null);
-    }
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("User is logged in.");
+        callback(user);
+      } else {
+        console.log("No user is logged in.");
+        callback(null);
+      }
+      unsubscribe(); // Unsubscribe after first auth state change
+      resolve();
+    });
   });
 };
 
