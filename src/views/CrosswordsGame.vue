@@ -299,7 +299,7 @@ function initializeGrid() {
 }
 
 function getWordsForLevel(level) {
-  const wordsPerLevel = 4
+  const wordsPerLevel = 10
   
   let filteredWords = vocabularyStore.words.filter(wordObj => wordObj.isActive)
 
