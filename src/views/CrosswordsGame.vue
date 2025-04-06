@@ -337,25 +337,46 @@ function placeWord(word, row, col, direction) {
 }
 
 function tryPlaceWord(word) {
+  // First try intersections with existing words
   for (let existingWord of placedWords.value) {
     for (let i = 0; i < word.length; i++) {
-      const letter = word[i]
-      const positions = getLetterPositions(existingWord.word, letter)
+      const letter = word[i];
+      const positions = getLetterPositions(existingWord.word, letter);
       
       for (let pos of positions) {
-        const crossRow = existingWord.row + (existingWord.direction === 'down' ? pos : 0)
-        const crossCol = existingWord.col + (existingWord.direction === 'across' ? pos : 0)
-        const startRow = crossRow - (existingWord.direction === 'down' ? 0 : i)
-        const startCol = crossCol - (existingWord.direction === 'across' ? 0 : i)
-        const direction = existingWord.direction === 'across' ? 'down' : 'across'
+        const crossRow = existingWord.row + (existingWord.direction === 'down' ? pos : 0);
+        const crossCol = existingWord.col + (existingWord.direction === 'across' ? pos : 0);
+        const startRow = crossRow - (existingWord.direction === 'down' ? 0 : i);
+        const startCol = crossCol - (existingWord.direction === 'across' ? 0 : i);
+        const direction = existingWord.direction === 'across' ? 'down' : 'across';
 
         if (canPlaceWord(word, startRow, startCol, direction)) {
-          return { row: startRow, col: startCol, direction: direction }
+          return { row: startRow, col: startCol, direction: direction };
         }
       }
     }
   }
-  return null
+
+  // If no intersections work, try placing the word in empty spaces
+  // Try horizontal placement
+  for (let row = 0; row < GRID_ROWS; row++) {
+    for (let col = 0; col <= GRID_COLS - word.length; col++) {
+      if (canPlaceWord(word, row, col, 'across')) {
+        return { row, col, direction: 'across' };
+      }
+    }
+  }
+
+  // Try vertical placement
+  for (let col = 0; col < GRID_COLS; col++) {
+    for (let row = 0; row <= GRID_ROWS - word.length; row++) {
+      if (canPlaceWord(word, row, col, 'down')) {
+        return { row, col, direction: 'down' };
+      }
+    }
+  }
+
+  return null;
 }
 
 function getLetterPositions(word, letter) {
@@ -370,33 +391,64 @@ function getLetterPositions(word, letter) {
 
 function canPlaceWord(word, row, col, direction) {
   if (direction === 'across') {
-    if (col < 0 || col + word.length > GRID_COLS || row < 0 || row >= GRID_ROWS) return false
+    if (col < 0 || col + word.length > GRID_COLS || row < 0 || row >= GRID_ROWS) return false;
 
+    let hasIntersection = false;
     for (let i = 0; i < word.length; i++) {
-      const currentCell = grid.value[row][col + i]
-      if (currentCell && currentCell !== word[i]) return false
+      const currentCell = grid.value[row][col + i];
+      if (currentCell) {
+        if (currentCell !== word[i]) return false;
+        hasIntersection = true;
+      }
       
-      if (row > 0 && grid.value[row - 1][col + i] && !isPartOfWord(row - 1, col + i)) return false
-      if (row < GRID_ROWS - 1 && grid.value[row + 1][col + i] && !isPartOfWord(row + 1, col + i)) return false
+      // Check for adjacent letters, but only if not part of another word
+      const above = row > 0 ? grid.value[row - 1][col + i] : null;
+      const below = row < GRID_ROWS - 1 ? grid.value[row + 1][col + i] : null;
+      
+      if ((above && !isPartOfWord(row - 1, col + i)) || 
+          (below && !isPartOfWord(row + 1, col + i))) {
+        return false;
+      }
     }
 
-    if (col > 0 && grid.value[row][col - 1]) return false
-    if (col + word.length < GRID_COLS && grid.value[row][col + word.length]) return false
+    // Check letters immediately before and after
+    const before = col > 0 ? grid.value[row][col - 1] : null;
+    const after = col + word.length < GRID_COLS ? grid.value[row][col + word.length] : null;
+    if (before || after) return false;
+
+    // If this is not the first word, require at least one intersection
+    return placedWords.value.length === 0 || hasIntersection;
+
   } else if (direction === 'down') {
-    if (row < 0 || row + word.length > GRID_ROWS || col < 0 || col >= GRID_COLS) return false
+    if (row < 0 || row + word.length > GRID_ROWS || col < 0 || col >= GRID_COLS) return false;
 
+    let hasIntersection = false;
     for (let i = 0; i < word.length; i++) {
-      const currentCell = grid.value[row + i][col]
-      if (currentCell && currentCell !== word[i]) return false
+      const currentCell = grid.value[row + i][col];
+      if (currentCell) {
+        if (currentCell !== word[i]) return false;
+        hasIntersection = true;
+      }
       
-      if (col > 0 && grid.value[row + i][col - 1] && !isPartOfWord(row + i, col - 1)) return false
-      if (col < GRID_COLS - 1 && grid.value[row + i][col + 1] && !isPartOfWord(row + i, col + 1)) return false
+      // Check for adjacent letters, but only if not part of another word
+      const left = col > 0 ? grid.value[row + i][col - 1] : null;
+      const right = col < GRID_COLS - 1 ? grid.value[row + i][col + 1] : null;
+      
+      if ((left && !isPartOfWord(row + i, col - 1)) || 
+          (right && !isPartOfWord(row + i, col + 1))) {
+        return false;
+      }
     }
 
-    if (row > 0 && grid.value[row - 1][col]) return false
-    if (row + word.length < GRID_ROWS && grid.value[row + word.length][col]) return false
+    // Check letters immediately above and below
+    const above = row > 0 ? grid.value[row - 1][col] : null;
+    const below = row + word.length < GRID_ROWS ? grid.value[row + word.length][col] : null;
+    if (above || below) return false;
+
+    // If this is not the first word, require at least one intersection
+    return placedWords.value.length === 0 || hasIntersection;
   }
-  return true
+  return false;
 }
 
 function isPartOfWord(row, col) {
@@ -410,52 +462,109 @@ function isPartOfWord(row, col) {
   })
 }
 
-function generateCrossword(wordList) {
-  initializeGrid()
+function numberCells() {
+  // Reset all numbers
+  let cellNumbers = Array(GRID_ROWS).fill().map(() => Array(GRID_COLS).fill(null));
+  let nextNumber = 1;
 
-  const sortedWords = [...wordList].sort((a, b) => b.word.length - a.word.length)
+  // Scan grid from top to bottom, left to right
+  for (let row = 0; row < GRID_ROWS; row++) {
+    for (let col = 0; col < GRID_COLS; col++) {
+      if (grid.value[row][col]) { // If cell has a letter
+        let isStart = false;
+        
+        // Check if start of across word
+        if (col === 0 || !grid.value[row][col-1]) {
+          if (col < GRID_COLS - 1 && grid.value[row][col+1]) {
+            isStart = true;
+          }
+        }
+        
+        // Check if start of down word
+        if (row === 0 || !grid.value[row-1][col]) {
+          if (row < GRID_ROWS - 1 && grid.value[row+1][col]) {
+            isStart = true;
+          }
+        }
 
-  // Place first word in center horizontally
-  const firstWord = sortedWords[0]
-  const startRow = Math.floor(GRID_ROWS / 2)
-  const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2)
-
-  const positions = placeWord(firstWord.word, startRow, startCol, 'across')
-  placedWords.value.push({
-    word: firstWord.word,
-    clue: firstWord.clue,
-    row: startRow,
-    col: startCol,
-    direction: 'across',
-    number: 1,
-    positions: positions
-  })
-
-  let wordNumber = 2
-
-  for (let i = 1; i < sortedWords.length; i++) {
-    const wordObj = sortedWords[i]
-    const placed = tryPlaceWord(wordObj.word)
-    if (placed) {
-      const positions = placeWord(wordObj.word, placed.row, placed.col, placed.direction)
-      placedWords.value.push({
-        word: wordObj.word,
-        clue: wordObj.clue,
-        row: placed.row,
-        col: placed.col,
-        direction: placed.direction,
-        number: wordNumber,
-        positions: positions
-      })
-      wordNumber++
+        if (isStart) {
+          cellNumbers[row][col] = nextNumber++;
+        }
+      }
     }
   }
+
+  // Update word numbers based on their start positions
+  placedWords.value.forEach(word => {
+    word.number = cellNumbers[word.row][word.col];
+  });
 }
 
+function generateCrossword(wordList) {
+  const maxAttempts = 100; // Maximum attempts to place all 10 words
+  let attempt = 0;
+  
+  while (attempt < maxAttempts) {
+    initializeGrid();
+    placedWords.value = [];
+    
+    const sortedWords = [...wordList].sort((a, b) => b.word.length - a.word.length);
+    
+    // Place first word in center horizontally
+    const firstWord = sortedWords[0];
+    const startRow = Math.floor(GRID_ROWS / 2);
+    const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2);
+    
+    const positions = placeWord(firstWord.word, startRow, startCol, 'across');
+    placedWords.value.push({
+      word: firstWord.word,
+      clue: firstWord.clue,
+      row: startRow,
+      col: startCol,
+      direction: 'across',
+      positions: positions
+    });
+    
+    // Try to place remaining words
+    let wordsPlaced = 1;
+    for (let i = 1; i < sortedWords.length && wordsPlaced < 10; i++) {
+      const wordObj = sortedWords[i];
+      const placed = tryPlaceWord(wordObj.word);
+      if (placed) {
+        const positions = placeWord(wordObj.word, placed.row, placed.col, placed.direction);
+        placedWords.value.push({
+          word: wordObj.word,
+          clue: wordObj.clue,
+          row: placed.row,
+          col: placed.col,
+          direction: placed.direction,
+          positions: positions
+        });
+        wordsPlaced++;
+      }
+    }
+    
+    // If we successfully placed 10 words, number them and return
+    if (wordsPlaced === 10) {
+      numberCells();
+      return true;
+    }
+    
+    attempt++;
+  }
+  
+  return false; // Failed to place 10 words after max attempts
+}
+
+// Update startGame to handle failed placement
 function startGame() {
-  const wordsForLevel = getWordsForLevel(currentLevel.value)
-  generateCrossword(wordsForLevel)
-  clearHighlights()
+  const wordsForLevel = getWordsForLevel(currentLevel.value);
+  if (!generateCrossword(wordsForLevel)) {
+    alert('Não foi possível gerar um jogo de palavras cruzadas válido. Tentando novamente...');
+    startGame();
+    return;
+  }
+  clearHighlights();
 }
 
 // Initialization
