@@ -20,6 +20,7 @@
                 {{ getWordNumber(row, col) }}
               </span>
               <input
+                :id="`cell-${row}-${col}`"
                 :ref="el => cellRefs[`${row}-${col}`] = el"
                 maxLength="1"
                 :data-row="row"
@@ -75,8 +76,8 @@ import { useVocabularyStore } from '@/store/vocabularyStore'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
-const GRID_ROWS = 20
-const GRID_COLS = 20
+const GRID_ROWS = 25
+const GRID_COLS = 30
 const WORD_COLORS = [
   '#FF6B6B', // coral red
   '#4ECDC4', // turquoise
@@ -111,8 +112,8 @@ const vocabularyStore = useVocabularyStore()
 
 // Computed
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${GRID_COLS}, 40px)`,
-  gridTemplateRows: `repeat(${GRID_ROWS}, 40px)`
+  gridTemplateColumns: `repeat(${GRID_COLS}, 30px)`,
+  gridTemplateRows: `repeat(${GRID_ROWS}, 30px)`
 }))
 
 const gridRows = computed(() => Array.from({ length: GRID_ROWS }, (_, i) => i))
@@ -294,6 +295,8 @@ function checkAnswers() {
       input.style.backgroundColor = '#b2ffb2'
     } else {
       input.style.backgroundColor = '#ffb2b2'
+      input.value = input.dataset.correct // Show correct letter
+      input.style.color = '#FF0000' // Make incorrect answers red
       allCorrect = false
     }
   }
@@ -303,7 +306,7 @@ function checkAnswers() {
     currentLevel.value++
     startGame()
   } else {
-    alert('Existem erros em suas respostas. Por favor, verifique e tente novamente.')
+    console.log('Existem erros em suas respostas. As respostas corretas estão em vermelho.')
   }
 }
 
@@ -760,8 +763,8 @@ onMounted(() => {
 }
 
 .cell {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -853,8 +856,8 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .cell {
-    width: 24px;
-    height: 24px;
+    width: 100%;
+    height: 100%;
   }
   
   .cell input {
