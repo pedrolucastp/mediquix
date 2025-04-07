@@ -91,6 +91,17 @@ const WORD_COLORS = [
   '#98FB98'  // pale green
 ]
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
+const GRID_CENTER_ROW = Math.floor(GRID_ROWS / 2)
+const GRID_CENTER_COL = Math.floor(GRID_COLS / 2)
+
+// Add after the constants
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
 
 // Refs
 const currentLevel = ref(1)
@@ -319,25 +330,8 @@ function initializeGrid() {
 }
 
 function getWordsForLevel(level) {
-  const wordsPerLevel = 10
-  
-  let filteredWords = vocabularyStore.words.filter(wordObj => wordObj.isActive)
-
-  if (filteredWords.length < wordsPerLevel) {
-    alert('Não há palavras suficientes para as configurações selecionadas. O jogo será reiniciado.')
-    usedWordIndices.value = []
-    currentLevel.value = 1
-    return getWordsForLevel(currentLevel.value)
-  }
-
-  const wordsForLevel = []
-  for (let i = 0; i < wordsPerLevel; i++) {
-    const randomIndex = Math.floor(Math.random() * filteredWords.length)
-    const wordObj = filteredWords.splice(randomIndex, 1)[0]
-    wordsForLevel.push(wordObj)
-  }
-
-  return wordsForLevel
+  // Get ALL filtered words instead of just 10
+  return vocabularyStore.words.filter(wordObj => wordObj.isActive)
 }
 
 function placeWord(word, row, col, direction) {
@@ -528,20 +522,37 @@ function countIntersections(word, row, col, direction) {
 
 async function generateCrossword(wordList) {
   currentAttempt.value = 1;
+  console.log('Total word pool:', wordList.length, 'words');
   
   while (currentAttempt.value <= maxAttempts.value) {
     initializeGrid();
     let availableWords = [...wordList];
+    console.log(`Attempt ${currentAttempt.value} with ${availableWords.length} available words`);
 
-    // Place first word in the center
     let firstWordPlaced = false;
-    while (!firstWordPlaced && availableWords.length > 0) {
-      const firstWordIndex = Math.floor(Math.random() * availableWords.length);
-      const firstWord = availableWords[firstWordIndex];
-      const direction = 'across';
+    let triedIndices = new Set();
+
+    while (!firstWordPlaced && triedIndices.size < availableWords.length) {
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * availableWords.length);
+      } while (triedIndices.has(randomIndex));
       
-      const startRow = Math.floor(GRID_ROWS / 2);
-      const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2);
+      triedIndices.add(randomIndex);
+      const firstWord = availableWords[randomIndex];
+      console.log('Trying first word:', firstWord.word);
+      
+      // Randomize first word direction
+      const direction = Math.random() > 0.5 ? 'across' : 'down';
+      console.log('First word direction:', direction);
+      
+      // Calculate start position based on direction
+      const startRow = direction === 'across' 
+        ? GRID_CENTER_ROW 
+        : GRID_CENTER_ROW - Math.floor(firstWord.word.length / 2);
+      const startCol = direction === 'across'
+        ? GRID_CENTER_COL - Math.floor(firstWord.word.length / 2)
+        : GRID_CENTER_COL;
       
       if (canPlaceWord(firstWord.word, startRow, startCol, direction)) {
         const positions = await visualizePlacement(firstWord.word, startRow, startCol, direction, false);
@@ -556,9 +567,9 @@ async function generateCrossword(wordList) {
             number: 1,
             color: WORD_COLORS[0]
           }];
-          availableWords.splice(firstWordIndex, 1);
+          availableWords.splice(randomIndex, 1);
           firstWordPlaced = true;
-
+          
           const success = await placeRemainingWords(availableWords);
           if (success) {
             return true;
@@ -575,103 +586,61 @@ async function generateCrossword(wordList) {
 }
 
 async function placeRemainingWords(availableWords) {
-  // First 3 words with guaranteed intersections
-  for (let i = 1; i < 4; i++) {
-    const prevWord = placedWords.value[i - 1];
-    const direction = prevWord.direction === 'across' ? 'down' : 'across';
+  console.log('Trying to place remaining words. Pool size:', availableWords.length);
+  
+  while (placedWords.value.length < 10) {
     let placed = false;
     
-    while (!placed && availableWords.length > 0) {
-      const nextWord = findWordWithCommonCharacters(prevWord.word, availableWords);
-      if (!nextWord) break;
-      
-      for (let prevPos = 0; prevPos < prevWord.word.length && !placed; prevPos++) {
-        const prevLetter = prevWord.word[prevPos];
-        
-        for (let nextPos = 0; nextPos < nextWord.word.length && !placed; nextPos++) {
-          if (nextWord.word[nextPos] === prevLetter) {
-            let row = prevWord.row;
-            let col = prevWord.col;
-            
-            if (prevWord.direction === 'across') {
-              row = prevWord.row - nextPos;
-              col = prevWord.col + prevPos;
-            } else {
-              row = prevWord.row + prevPos;
-              col = prevWord.col - nextPos;
-            }
-            
-            if (canPlaceWord(nextWord.word, row, col, direction)) {
-              await visualizePlacement(nextWord.word, row, col, direction, true);
-              const positions = await visualizePlacement(nextWord.word, row, col, direction, false);
-              
-              if (positions.length > 0) {
-                placedWords.value.push({
-                  word: nextWord.word,
-                  clue: nextWord.clue,
-                  row: row,
-                  col: col,
-                  direction: direction,
-                  positions: positions,
-                  number: i + 1,
-                  color: WORD_COLORS[placedWords.value.length]
-                });
-                availableWords.splice(availableWords.indexOf(nextWord), 1);
-                placed = true;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (!placed) return false;
-  }
-
-  // Remaining words with maximum intersections
-  while (placedWords.value.length < 10 && availableWords.length > 0) {
-    let bestPlacement = null;
-    let bestWord = null;
-    let bestWordIndex = -1;
-    let maxIntersections = 0;
-
-    for (let i = 0; i < availableWords.length; i++) {
+    // Shuffle words before trying placement
+    shuffleArray(availableWords);
+    
+    // Try each word in random order
+    for (let i = 0; i < availableWords.length && !placed; i++) {
       const word = availableWords[i];
       
-      for (const direction of ['across', 'down']) {
-        for (let row = 0; row < GRID_ROWS; row++) {
-          for (let col = 0; col < GRID_COLS; col++) {
+      // Randomize direction order
+      const directions = Math.random() > 0.5 ? ['across', 'down'] : ['down', 'across'];
+      
+      // Get random starting positions
+      const rows = shuffleArray([...Array(GRID_ROWS).keys()]);
+      const cols = shuffleArray([...Array(GRID_COLS).keys()]);
+      
+      for (const direction of directions) {
+        for (const row of rows) {
+          for (const col of cols) {
             if (canPlaceWord(word.word, row, col, direction)) {
               await visualizePlacement(word.word, row, col, direction, true);
               const intersections = countIntersections(word.word, row, col, direction);
-              if (intersections > 0 && intersections > maxIntersections) {
-                maxIntersections = intersections;
-                bestPlacement = { row, col, direction };
-                bestWord = word;
-                bestWordIndex = i;
+              
+              if (intersections > 0 || placedWords.value.length === 0) {
+                const positions = await visualizePlacement(word.word, row, col, direction, false);
+                if (positions.length > 0) {
+                  placedWords.value.push({
+                    word: word.word,
+                    clue: word.clue,
+                    row: row,
+                    col: col,
+                    direction: direction,
+                    positions: positions,
+                    number: placedWords.value.length + 1,
+                    color: WORD_COLORS[placedWords.value.length]
+                  });
+                  availableWords.splice(i, 1);
+                  placed = true;
+                  console.log(`Placed word ${placedWords.value.length}/10. Remaining pool:`, availableWords.length);
+                  break;
+                }
               }
             }
           }
+          if (placed) break;
         }
+        if (placed) break;
       }
     }
-
-    if (bestPlacement && bestWord && maxIntersections > 0) {
-      const positions = await visualizePlacement(bestWord.word, bestPlacement.row, bestPlacement.col, bestPlacement.direction, false);
-      if (positions.length > 0) {
-        placedWords.value.push({
-          word: bestWord.word,
-          clue: bestWord.clue,
-          row: bestPlacement.row,
-          col: bestPlacement.col,
-          direction: bestPlacement.direction,
-          positions: positions,
-          number: placedWords.value.length + 1,
-          color: WORD_COLORS[placedWords.value.length]
-        });
-        availableWords.splice(bestWordIndex, 1);
-      }
-    } else {
+    
+    if (!placed) {
+      console.log('No more words can be placed with current configuration');
       return false;
     }
   }
@@ -712,9 +681,10 @@ onMounted(() => {
   align-items: flex-start;
   gap: var(--spacing-lg, 2rem);
   padding: var(--spacing-md, 1rem);
-  max-width: 1200px;
+  max-width: 1400px; /* Increased max-width */
   margin: 0 auto;
   width: 100%;
+  min-height: calc(100vh - 200px); /* Add minimum height */
 }
 
 #crossword {
@@ -722,17 +692,18 @@ onMounted(() => {
   gap: 0;
   margin: 0 auto;
   width: max-content;
-  padding: 1rem;
+  padding: 2rem; /* Increased padding */
   background: var(--surface-color, #fff);
-  border-radius: 8px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md); /* Use design system variable */
+  box-shadow: var(--shadow-md); /* Stronger shadow */
   overflow: auto;
+  max-height: 80vh; /* Maximum height */
 }
 
 #clues {
   position: sticky;
   top: var(--spacing-md, 1rem);
-  width: 300px;
+  width: 350px; /* Slightly wider */
   flex-shrink: 0;
   padding: var(--spacing-md, 1rem);
   background: var(--surface-color, #fff);
