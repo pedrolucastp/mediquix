@@ -58,6 +58,13 @@
       </div>
     </div>
     
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loading-message">
+        <p>Gerando palavras cruzadas...</p>
+        <p>Tentativa {{ currentAttempt }} de {{ maxAttempts }}</p>
+      </div>
+    </div>
+    
     <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
   </div>
 </template>
@@ -65,8 +72,6 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useVocabularyStore } from '@/store/vocabularyStore'
-// import { useSettingsStore } from '@/store/userSettings'
-// import { useUIStore } from '@/store/ui'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
@@ -84,6 +89,7 @@ const WORD_COLORS = [
   '#87CEEB', // light blue
   '#98FB98'  // pale green
 ]
+const PLACEMENT_DELAY = 20; // 500ms delay between attempts
 
 // Refs
 const currentLevel = ref(1)
@@ -97,11 +103,11 @@ const highlightedIntersections = ref(new Set())
 const highlightedClue = ref(null)
 const cellRefs = reactive({})
 const isLoading = ref(false)
+const currentAttempt = ref(1)
+const maxAttempts = ref(10)
 
 // Stores
 const vocabularyStore = useVocabularyStore()
-// const settingsStore = useSettingsStore()
-// const uiStore = useUIStore()
 
 // Computed
 const gridStyle = computed(() => ({
@@ -129,7 +135,6 @@ function getCellWords(row, col) {
 
 function isStartingCell(row, col) {
   return placedWords.value.some(word => {
-    // Check if this cell is the start of any word
     if (word.row === row && word.col === col) {
       return true;
     }
@@ -157,7 +162,6 @@ function isClueHighlighted(number) {
 function highlightWord(wordObj) {
   clearHighlights()
   
-  // Only highlight the word cells
   wordObj.positions.forEach(pos => {
     highlightedCells.value.add(`${pos.row}-${pos.col}`)
   })
@@ -195,7 +199,6 @@ function handleInputFocus(event) {
     currentWord.value = cellWords[0]
     currentDirection.value = currentWord.value.direction
     
-    // Highlight word when focusing input
     const word = placedWords.value.find(w => w.number === cellWords[0].wordNumber)
     if (word) {
       highlightWord(word)
@@ -207,7 +210,6 @@ function handleInput(event) {
   const input = event.target
   input.value = input.value.toUpperCase()
   
-  // Allow accented characters but normalize for comparison
   const normalizedValue = normalizeString(input.value)
   const normalizedCorrect = normalizeString(input.dataset.correct)
   
@@ -338,24 +340,20 @@ function getWordsForLevel(level) {
 function placeWord(word, row, col, direction) {
   let positions = []
   
-  // Validate input parameters and grid boundaries
   if (!grid.value || !Array.isArray(grid.value)) {
     console.error('Grid is not properly initialized');
     return positions;
   }
 
-  // Check boundaries before attempting to place the word
   if (direction === 'across') {
     if (row < 0 || row >= GRID_ROWS || col < 0 || col + word.length > GRID_COLS) {
       console.error('Word placement out of bounds');
       return positions;
     }
-    // Ensure the row exists
     if (!grid.value[row]) {
       console.error(`Row ${row} does not exist in grid`);
       return positions;
     }
-    // Place word horizontally
     for (let i = 0; i < word.length; i++) {
       if (grid.value[row][col + i] === undefined) {
         console.error(`Invalid cell at row ${row}, col ${col + i}`);
@@ -369,9 +367,7 @@ function placeWord(word, row, col, direction) {
       console.error('Word placement out of bounds');
       return positions;
     }
-    // Place word vertically
     for (let i = 0; i < word.length; i++) {
-      // Ensure the row exists
       if (!grid.value[row + i]) {
         console.error(`Row ${row + i} does not exist in grid`);
         continue;
@@ -399,7 +395,6 @@ function canPlaceWord(word, row, col, direction) {
         hasIntersection = true;
       }
       
-      // Check for adjacent letters, but only if not part of another word
       const above = row > 0 ? grid.value[row - 1][col + i] : null;
       const below = row < GRID_ROWS - 1 ? grid.value[row + 1][col + i] : null;
       
@@ -409,12 +404,10 @@ function canPlaceWord(word, row, col, direction) {
       }
     }
 
-    // Check letters immediately before and after
     const before = col > 0 ? grid.value[row][col - 1] : null;
     const after = col + word.length < GRID_COLS ? grid.value[row][col + word.length] : null;
     if (before || after) return false;
 
-    // If this is not the first word, require at least one intersection
     return placedWords.value.length === 0 || hasIntersection;
 
   } else if (direction === 'down') {
@@ -428,7 +421,6 @@ function canPlaceWord(word, row, col, direction) {
         hasIntersection = true;
       }
       
-      // Check for adjacent letters, but only if not part of another word
       const left = col > 0 ? grid.value[row + i][col - 1] : null;
       const right = col < GRID_COLS - 1 ? grid.value[row + i][col + 1] : null;
       
@@ -438,12 +430,10 @@ function canPlaceWord(word, row, col, direction) {
       }
     }
 
-    // Check letters immediately above and below
     const above = row > 0 ? grid.value[row - 1][col] : null;
     const below = row + word.length < GRID_ROWS ? grid.value[row + word.length][col] : null;
     if (above || below) return false;
 
-    // If this is not the first word, require at least one intersection
     return placedWords.value.length === 0 || hasIntersection;
   }
   return false;
@@ -461,13 +451,10 @@ function isPartOfWord(row, col) {
 }
 
 function findWordWithCommonCharacters(previousWord, availableWords) {
-  // Create a set of characters from the previous word
   const prevWordChars = new Set(previousWord.split(''));
   
-  // Filter words that have at least one common character
   const wordsWithCommon = availableWords.filter(wordObj => {
     const wordChars = new Set(wordObj.word.split(''));
-    // Check for intersection between character sets
     for (const char of wordChars) {
       if (prevWordChars.has(char)) {
         return true;
@@ -480,68 +467,129 @@ function findWordWithCommonCharacters(previousWord, availableWords) {
     return null;
   }
   
-  // Return a random word from the filtered list
   return wordsWithCommon[Math.floor(Math.random() * wordsWithCommon.length)];
 }
 
-function generateCrossword(wordList) {
-  initializeGrid();
-  placedWords.value = [];
-  let availableWords = [...wordList];
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  // Place first word in the center
-  let firstWordPlaced = false;
-  while (!firstWordPlaced && availableWords.length > 0) {
-    const firstWordIndex = Math.floor(Math.random() * availableWords.length);
-    const firstWord = availableWords[firstWordIndex];
-    const direction = 'across';
-    
-    const startRow = Math.floor(GRID_ROWS / 2);
-    const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2);
-    
-    if (canPlaceWord(firstWord.word, startRow, startCol, direction)) {
-      const positions = placeWord(firstWord.word, startRow, startCol, direction);
-      if (positions.length > 0) {
-        placedWords.value.push({
-          word: firstWord.word,
-          clue: firstWord.clue,
-          row: startRow,
-          col: startCol,
-          direction: direction,
-          positions: positions,
-          number: 1,
-          color: WORD_COLORS[0] // Add color to the word
-        });
-        availableWords.splice(firstWordIndex, 1);
-        firstWordPlaced = true;
+async function visualizePlacement(word, row, col, direction, temp = true) {
+  const positions = [];
+  if (direction === 'across') {
+    for (let i = 0; i < word.length; i++) {
+      if (grid.value[row][col + i] === null) {
+        grid.value[row][col + i] = temp ? '?' : word[i];
+        positions.push({ row, col: col + i });
+      }
+    }
+  } else {
+    for (let i = 0; i < word.length; i++) {
+      if (grid.value[row + i][col] === null) {
+        grid.value[row + i][col] = temp ? '?' : word[i];
+        positions.push({ row: row + i, col });
       }
     }
   }
+  
+  if (temp) {
+    await sleep(PLACEMENT_DELAY);
+    positions.forEach(pos => {
+      if (grid.value[pos.row][pos.col] === '?') {
+        grid.value[pos.row][pos.col] = null;
+      }
+    });
+  }
+  return positions;
+}
 
-  if (!firstWordPlaced) return false;
+function countIntersections(word, row, col, direction) {
+  let intersections = 0;
+  
+  if (direction === 'across') {
+    for (let i = 0; i < word.length; i++) {
+      if (grid.value[row][col + i] !== null && grid.value[row][col + i] === word[i]) {
+        intersections++;
+      }
+    }
+  } else {
+    for (let i = 0; i < word.length; i++) {
+      if (grid.value[row + i][col] !== null && grid.value[row + i][col] === word[i]) {
+        intersections++;
+      }
+    }
+  }
+  
+  return intersections;
+}
 
-  // Place words 2-4 with guaranteed intersections
+async function generateCrossword(wordList) {
+  currentAttempt.value = 1;
+  
+  while (currentAttempt.value <= maxAttempts.value) {
+    initializeGrid();
+    let availableWords = [...wordList];
+
+    // Place first word in the center
+    let firstWordPlaced = false;
+    while (!firstWordPlaced && availableWords.length > 0) {
+      const firstWordIndex = Math.floor(Math.random() * availableWords.length);
+      const firstWord = availableWords[firstWordIndex];
+      const direction = 'across';
+      
+      const startRow = Math.floor(GRID_ROWS / 2);
+      const startCol = Math.floor((GRID_COLS - firstWord.word.length) / 2);
+      
+      if (canPlaceWord(firstWord.word, startRow, startCol, direction)) {
+        const positions = await visualizePlacement(firstWord.word, startRow, startCol, direction, false);
+        if (positions.length > 0) {
+          placedWords.value = [{
+            word: firstWord.word,
+            clue: firstWord.clue,
+            row: startRow,
+            col: startCol,
+            direction: direction,
+            positions: positions,
+            number: 1,
+            color: WORD_COLORS[0]
+          }];
+          availableWords.splice(firstWordIndex, 1);
+          firstWordPlaced = true;
+
+          const success = await placeRemainingWords(availableWords);
+          if (success) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    currentAttempt.value++;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return false;
+}
+
+async function placeRemainingWords(availableWords) {
+  // First 3 words with guaranteed intersections
   for (let i = 1; i < 4; i++) {
     const prevWord = placedWords.value[i - 1];
     const direction = prevWord.direction === 'across' ? 'down' : 'across';
     let placed = false;
     
-    // Find words that have common characters with the previous word
     while (!placed && availableWords.length > 0) {
       const nextWord = findWordWithCommonCharacters(prevWord.word, availableWords);
       if (!nextWord) break;
       
-      // Try to place the word with common characters
       for (let prevPos = 0; prevPos < prevWord.word.length && !placed; prevPos++) {
         const prevLetter = prevWord.word[prevPos];
         
-        // Try each matching letter in the next word
         for (let nextPos = 0; nextPos < nextWord.word.length && !placed; nextPos++) {
           if (nextWord.word[nextPos] === prevLetter) {
             let row = prevWord.row;
             let col = prevWord.col;
             
-            // Calculate intersection point
             if (prevWord.direction === 'across') {
               row = prevWord.row - nextPos;
               col = prevWord.col + prevPos;
@@ -550,9 +598,10 @@ function generateCrossword(wordList) {
               col = prevWord.col - nextPos;
             }
             
-            // Verify placement is valid and creates intersection
             if (canPlaceWord(nextWord.word, row, col, direction)) {
-              const positions = placeWord(nextWord.word, row, col, direction);
+              await visualizePlacement(nextWord.word, row, col, direction, true);
+              const positions = await visualizePlacement(nextWord.word, row, col, direction, false);
+              
               if (positions.length > 0) {
                 placedWords.value.push({
                   word: nextWord.word,
@@ -562,11 +611,10 @@ function generateCrossword(wordList) {
                   direction: direction,
                   positions: positions,
                   number: i + 1,
-                  color: WORD_COLORS[placedWords.value.length] // Add color to the word
+                  color: WORD_COLORS[placedWords.value.length]
                 });
                 availableWords.splice(availableWords.indexOf(nextWord), 1);
                 placed = true;
-                break;
               }
             }
           }
@@ -574,32 +622,24 @@ function generateCrossword(wordList) {
       }
     }
 
-    if (!placed) {
-      console.error(`Could not place word ${i + 1}`);
-      return false;
-    }
+    if (!placed) return false;
   }
 
-  // Place remaining words (5-10) maximizing intersections
-  let attempts = 0;
-  const maxAttempts = 1000; // Increased to ensure we place all 10 words
-
-  while (placedWords.value.length < 10 && availableWords.length > 0 && attempts < maxAttempts) {
+  // Remaining words with maximum intersections
+  while (placedWords.value.length < 10 && availableWords.length > 0) {
     let bestPlacement = null;
     let bestWord = null;
     let bestWordIndex = -1;
     let maxIntersections = 0;
 
-    // Try each remaining word
     for (let i = 0; i < availableWords.length; i++) {
       const word = availableWords[i];
       
-      // Try both directions
       for (const direction of ['across', 'down']) {
-        // Try each position
         for (let row = 0; row < GRID_ROWS; row++) {
           for (let col = 0; col < GRID_COLS; col++) {
             if (canPlaceWord(word.word, row, col, direction)) {
+              await visualizePlacement(word.word, row, col, direction, true);
               const intersections = countIntersections(word.word, row, col, direction);
               if (intersections > 0 && intersections > maxIntersections) {
                 maxIntersections = intersections;
@@ -614,7 +654,7 @@ function generateCrossword(wordList) {
     }
 
     if (bestPlacement && bestWord && maxIntersections > 0) {
-      const positions = placeWord(bestWord.word, bestPlacement.row, bestPlacement.col, bestPlacement.direction);
+      const positions = await visualizePlacement(bestWord.word, bestPlacement.row, bestPlacement.col, bestPlacement.direction, false);
       if (positions.length > 0) {
         placedWords.value.push({
           word: bestWord.word,
@@ -624,49 +664,34 @@ function generateCrossword(wordList) {
           direction: bestPlacement.direction,
           positions: positions,
           number: placedWords.value.length + 1,
-          color: WORD_COLORS[placedWords.value.length] // Add color to the word
+          color: WORD_COLORS[placedWords.value.length]
         });
         availableWords.splice(bestWordIndex, 1);
-        attempts = 0; // Reset attempts after successful placement
       }
-    }
-    attempts++;
-  }
-
-  if (placedWords.value.length < 10) {
-    console.error('Could not place all 10 words');
-    return false;
-  }
-
-  return true;
-}
-
-function countIntersections(word, row, col, direction) {
-  let intersections = 0;
-  if (direction === 'across') {
-    for (let i = 0; i < word.length; i++) {
-      if (grid.value[row][col + i] === word[i]) {
-        intersections++;
-      }
-    }
-  } else {
-    for (let i = 0; i < word.length; i++) {
-      if (grid.value[row + i][col] === word[i]) {
-        intersections++;
-      }
+    } else {
+      return false;
     }
   }
-  return intersections;
+
+  return placedWords.value.length === 10;
 }
 
 async function startGame() {
   try {
     isLoading.value = true;
+    currentAttempt.value = 1;
     const wordsForLevel = getWordsForLevel(currentLevel.value);
-    generateCrossword(wordsForLevel);
-    clearHighlights();
+    const success = await generateCrossword(wordsForLevel);
+    
+    if (!success) {
+      await startGame(); // Retry if unsuccessful
+    }
+  } catch (error) {
+    console.error('Error generating crossword:', error);
+    await startGame(); // Retry on error
   } finally {
     isLoading.value = false;
+    clearHighlights();
   }
 }
 
@@ -835,6 +860,32 @@ onMounted(() => {
   .cell input {
     font-size: 14px;
   }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 20px;
+  background-color: var(--surface-color, #fff);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+:deep(.dark) .loading-overlay {
+  background: rgba(0, 0, 0, 0.8);
 }
 
 :deep(.dark) .cell {
