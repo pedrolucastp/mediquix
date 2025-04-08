@@ -1,7 +1,9 @@
 <template>
   <div class="crosswords-game">
     <h1>Palavras Cruzadas</h1>
+
     <SelectorsComponent @specialty-change="startGame" @difficulty-change="startGame" />
+
 
 
     <div id="crossword-container">
@@ -14,9 +16,8 @@
               </span>
               <input :id="`cell-${row}-${col}`" :ref="el => cellRefs[`${row}-${col}`] = el" maxLength="1"
                 :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
-                :style="{ backgroundColor: getCellColor(row, col) }"
-                 @input="handleInput" 
-                 @click="handleCellClick(row, col)" />
+                :style="{ backgroundColor: getCellColor(row, col) }" @input="handleInput"
+                @click="handleCellClick(row, col)" />
 
             </template>
           </div>
@@ -24,22 +25,25 @@
       </div>
 
       <div id="clues">
-       
+
         <!-- <h2>Dicas</h2> -->
+        <div class="button-container">
+
+          <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
+          <button id="new-game-button" @click="startGame">Novo Jogo</button>
+        </div>
         <ul id="clue-list">
           <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
-            @click="highlightWord(word)" :style="{ color: word.color }" alt="{{ word.word }}">
+            @click="highlightWord(word)" :style="{ color: word.color }" :title="word.word">
             {{ word.number }}. {{ word.clue }}
             ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
           </li>
         </ul>
+
       </div>
-      
+
     </div>
-    <div class="button-container">
-          <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
-          <button id="new-game-button" @click="startGame">Novo Jogo</button>
-        </div>
+
 
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-message">
@@ -58,6 +62,7 @@ import { useVocabularyStore } from '@/store/vocabularyStore'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
+const WORD_COUNT = 30
 const GRID_ROWS = 25
 const GRID_COLS = 30
 const WORD_COLORS = [
@@ -122,7 +127,7 @@ function getCellColor(row, col) {
   const cellWords = placedWords.value.filter(word => {
     return word.positions.some(pos => pos.row === row && pos.col === col)
   })
-  return cellWords.length > 0 ? cellWords[0].color + ((isHighlighted(row, col) || isIntersectionHighlighted(row, col))  ? '' : '70') : 'transparent' // Adding 40 for 25% opacity
+  return cellWords.length > 0 ? getCell(row, col) === ' ' ? 'white' : cellWords[0].color + ((isHighlighted(row, col) || isIntersectionHighlighted(row, col)) ? '' : '70') : 'transparent' // Adding 40 for 25% opacity
 }
 
 function isStartingCell(row, col) {
@@ -211,7 +216,9 @@ function handleInput(event) {
   }
 
   // Handle normal typing (overwrite mode)
+
   input.value = event.data.toUpperCase()
+  input.select()
   moveToNextInput(input)
 }
 
@@ -551,7 +558,7 @@ function findAllPossiblePositions(word, direction) {
 
 async function placeRemainingWords(availableWords) {
 
-  while (placedWords.value.length < 10) {
+  while (placedWords.value.length < WORD_COUNT) {
     let placed = false;
     const triedIndices = new Set();
 
@@ -598,7 +605,10 @@ async function placeRemainingWords(availableWords) {
             direction: selectedPosition.direction,
             positions: positions,
             number: placedWords.value.length + 1,
-            color: WORD_COLORS[placedWords.value.length]
+            
+            // Assign a color based on the amount of available colors.
+            // color: WORD_COLORS[placedWords.value.length]
+            color: WORD_COLORS[placedWords.value.length % WORD_COLORS.length]
           });
           availableWords.splice(randomIndex, 1);
           placed = true;
@@ -613,7 +623,7 @@ async function placeRemainingWords(availableWords) {
     }
   }
 
-  return placedWords.value.length === 10;
+  return placedWords.value.length === WORD_COUNT;
 }
 
 async function generateCrossword(words) {
@@ -722,7 +732,7 @@ onMounted(() => {
   width: max-content;
   padding: 2rem;
   /* Increased padding */
-  background: var(--surface-color, #fff);
+  background: #eee;
   border-radius: var(--radius-md);
   /* Use design system variable */
   box-shadow: var(--shadow-md);
@@ -740,12 +750,13 @@ onMounted(() => {
 }
 
 #crossword::-webkit-scrollbar-track {
-  background: var(--surface-color);
+  background: transparent;
   border-radius: 3px;
 }
 
 #crossword::-webkit-scrollbar-thumb {
   background: var(--primary-color);
+
   border-radius: 3px;
 }
 
@@ -755,8 +766,8 @@ onMounted(() => {
 
 /* Firefox */
 #crossword {
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary-color) var(--surface-color);
+  /* scrollbar-width: thin; */
+  /* scrollbar-color: var(--primary-color) var(--surface-color); */
 }
 
 #clues {
@@ -766,8 +777,7 @@ onMounted(() => {
   /* Slightly wider */
   flex-shrink: 0;
   padding: var(--spacing-md, 1rem);
-  background: darkslategrey;
-  /* Changed background color */
+  background: darkslategray;
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-sm);
   /* max-height: calc(100vh - 200px);
@@ -776,7 +786,7 @@ onMounted(() => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 /* Scrollbar styling for clues container */
@@ -888,7 +898,7 @@ onMounted(() => {
 }
 
 #clue-list li {
-  margin-bottom: 10px;
+  margin-bottom: 0px;
   font-size: 1rem;
   text-align: left;
   color: var(--text-color);
@@ -903,7 +913,7 @@ onMounted(() => {
   border-radius: 5px;
   font-size: 1.1rem;
   /*  */
-  
+
 }
 
 .button-container {
@@ -915,8 +925,8 @@ onMounted(() => {
 
 #check-button,
 #new-game-button {
-  padding: 10px 20px;
-  font-size: 16px;
+  padding: 8px 20px;
+  font-size: 14px;
   background-color: var(--primary-color);
   color: #fff;
   border: none;
