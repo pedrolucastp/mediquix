@@ -14,10 +14,10 @@
               </span>
               <input :id="`cell-${row}-${col}`" :ref="el => cellRefs[`${row}-${col}`] = el" maxLength="1"
                 :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
-                :style="{ backgroundColor: getCellColor(row, col) }" :class="{
-                  'highlighted': isHighlighted(row, col),
-                  'highlighted-intersection': isIntersectionHighlighted(row, col)
-                }" @input="handleInput" @keydown="handleKeyDown" @click="handleCellClick(row, col)" />
+                :style="{ backgroundColor: getCellColor(row, col) }"
+                 @input="handleInput" 
+                 @keydown="handleKeyDown" 
+                 @click="handleCellClick(row, col)" />
 
             </template>
           </div>
@@ -123,7 +123,7 @@ function getCellColor(row, col) {
   const cellWords = placedWords.value.filter(word => {
     return word.positions.some(pos => pos.row === row && pos.col === col)
   })
-  return cellWords.length > 0 ? cellWords[0].color + '90' : 'transparent' // Adding 40 for 25% opacity
+  return cellWords.length > 0 ? cellWords[0].color + ((isHighlighted(row, col) || isIntersectionHighlighted(row, col))  ? '' : '70') : 'transparent' // Adding 40 for 25% opacity
 }
 
 function isStartingCell(row, col) {
@@ -889,10 +889,17 @@ onMounted(() => {
   text-align: left;
   color: var(--text-color);
   word-wrap: break-word;
+  cursor: pointer;
+  padding: 4px;
 }
 
 #clue-list li.highlighted {
-  background-color: var(--highlight-color, rgba(255, 255, 0, 0.3));
+  /* background-color: var(--highlight-color, rgba(255, 255, 0, 0.3)); */
+  border: 2px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 1.1rem;
+  /*  */
+  
 }
 
 .button-container {
