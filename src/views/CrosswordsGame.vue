@@ -28,7 +28,7 @@
         </div>
         <ul id="clue-list">
           <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
-            @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}` }" :title="word.word">
+            @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}`, fontSize: isLoading ? '0' : 'inherit', padding: isLoading ? '0' : 'inherit' }" :title="word.word">
             {{ word.number }}. {{ word.clue }}
             ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
           </li>
@@ -56,7 +56,9 @@ import { useVocabularyStore } from '@/store/vocabularyStore'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
-const WORD_COUNT = 5
+const PLACEMENT_DELAY = 200; // 500ms delay between attempts
+const GAME_ATTEMPTS = 10;
+const WORD_COUNT = 10
 const GRID_ROWS = 25
 const GRID_COLS = 30
 const WORD_COLORS = [
@@ -71,7 +73,6 @@ const WORD_COLORS = [
   '#87CEEB', // light blue
   '#98FB98'  // pale green
 ]
-const PLACEMENT_DELAY = 20; // 500ms delay between attempts
 const GRID_CENTER_ROW = Math.floor(GRID_ROWS / 2)
 const GRID_CENTER_COL = Math.floor(GRID_COLS / 2)
 
@@ -553,13 +554,15 @@ async function placeRemainingWords(availableWords) {
 }
 
 async function generateCrossword(words) {
-  if (currentAttempt.value > 10) {
+  if (currentAttempt.value > GAME_ATTEMPTS) {
     console.log('Maximum attempts reached');
     return false;
   }
 
   console.log(`Attempt ${currentAttempt.value} of 10`);
   initializeGrid();
+  setTimeout(() => scrollToGridCenter(), 100)
+
 
   // Create a copy of words array to work with
   const availableWords = [...words];
@@ -611,30 +614,45 @@ async function generateCrossword(words) {
   return false;
 }
 
-// Modify the startGame function to handle initial load
+function scrollToGridCenter() {
+  const crosswordDiv = document.getElementById('crossword')
+  if (crosswordDiv) {
+    const scrollLeft = (crosswordDiv.scrollWidth - crosswordDiv.clientWidth) / 2
+    const scrollTop = (crosswordDiv.scrollHeight - crosswordDiv.clientHeight) / 2
+    crosswordDiv.scrollTo({
+      left: scrollLeft,
+      top: scrollTop,
+      // behavior: 'smooth'
+    })
+  }
+}
+
 async function startGame(force = false) {
   if (!force && !isInitialLoad.value) {
-    return // Don't restart if it's not initial load or forced
+    return
   }
   
   try {
     isLoading.value = true
-    currentAttempt.value = 1
+    // currentAttempt.value = 1
     const words = vocabularyStore.filteredWords
     const success = await generateCrossword(words)
 
-    if (!success && currentAttempt.value < 10) {
-      await startGame(true) // Only retry if we haven't reached max attempts
+    if (!success && currentAttempt.value < GAME_ATTEMPTS) {
+      await startGame(true)
+    // } else if (success) {
+      // Add small delay to ensure grid is fully rendered
+      // setTimeout(() => scrollToGridCenter(), 100)
     }
   } catch (error) {
     console.error('Error generating crossword:', error)
-    if (currentAttempt.value < 10) {
-      await startGame(true) // Only retry if we haven't reached max attempts
+    if (currentAttempt.value < GAME_ATTEMPTS) {
+      await startGame(true)
     }
   } finally {
     isLoading.value = false
     clearHighlights()
-    isInitialLoad.value = false // Set initial load to false after first load
+    isInitialLoad.value = false
   }
 }
 
@@ -647,7 +665,7 @@ onMounted(() => {
 <style scoped>
 #crossword-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: flex-start;
   gap: var(--spacing-lg, 2rem);
   padding: var(--spacing-md, 1rem);
@@ -657,6 +675,7 @@ onMounted(() => {
   width: 100%;
   min-height: calc(100vh - 200px);
   /* Add minimum height */
+  position: relative;
 }
 
 #crossword {
@@ -680,8 +699,10 @@ onMounted(() => {
   -webkit-user-select: none;
   user-select: none;
   transform: scale(1);
-  transform-origin: 0 0;
+  transform-origin: center;
   touch-action: pan-x pan-y pinch-zoom;
+  max-width: 80vw;
+  position: relative;
 }
 
 /* Scrollbar styling */

@@ -30,7 +30,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useUIStore } from '@/store/ui';
-import SelectorsComponent from '@/components/common/Selectors/SelectorsComponent.vue';
+import SelectorsComponent from '@/components/SelectorsComponent.vue';
 
 const props = defineProps({
   title: {
