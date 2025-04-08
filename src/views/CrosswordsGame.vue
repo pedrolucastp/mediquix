@@ -726,6 +726,8 @@ onMounted(() => {
   overflow: auto;
   max-height: 80vh;
   /* Maximum height */
+  border: 2px solid var(--dark-border-color);
+
 }
 
 #clues {
@@ -752,6 +754,7 @@ onMounted(() => {
   #crossword-container {
     flex-direction: column;
     align-items: center;
+    padding: 0;
   }
 
   #crossword {
