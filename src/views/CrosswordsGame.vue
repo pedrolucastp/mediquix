@@ -1,11 +1,5 @@
 <template>
   <div class="crosswords-game">
-    <h1>Palavras Cruzadas</h1>
-
-    <SelectorsComponent @specialty-change="startGame" @difficulty-change="startGame" />
-
-
-
     <div id="crossword-container">
       <div id="crossword" :style="gridStyle">
         <template v-for="row in gridRows" :key="row">
@@ -25,16 +19,16 @@
       </div>
 
       <div id="clues">
-
         <!-- <h2>Dicas</h2> -->
+        <h1>Palavras Cruzadas</h1>
+        <SelectorsComponent @specialty-change="startGame(true)" @difficulty-change="startGame(true)" />
         <div class="button-container">
-
           <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
-          <button id="new-game-button" @click="startGame">Novo Jogo</button>
+          <button id="new-game-button" @click="startGame(true)">Novo Jogo</button>
         </div>
         <ul id="clue-list">
           <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
-            @click="highlightWord(word)" :style="{ color: word.color }" :title="word.word">
+            @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}` }" :title="word.word">
             {{ word.number }}. {{ word.clue }}
             ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
           </li>
@@ -48,7 +42,7 @@
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-message">
         <p>Gerando palavras cruzadas...</p>
-        <p>Tentativa {{ currentAttempt }} de {{ maxAttempts }}</p>
+        <p>Tentativa {{ currentAttempt }} de 10</p>
       </div>
     </div>
 
@@ -62,7 +56,7 @@ import { useVocabularyStore } from '@/store/vocabularyStore'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
-const WORD_COUNT = 30
+const WORD_COUNT = 5
 const GRID_ROWS = 25
 const GRID_COLS = 30
 const WORD_COLORS = [
@@ -82,8 +76,6 @@ const GRID_CENTER_ROW = Math.floor(GRID_ROWS / 2)
 const GRID_CENTER_COL = Math.floor(GRID_COLS / 2)
 
 // Refs
-const currentLevel = ref(1)
-const usedWordIndices = ref([])
 const grid = ref([])
 const placedWords = ref([])
 const currentWord = ref(null)
@@ -94,10 +86,12 @@ const highlightedClue = ref(null)
 const cellRefs = reactive({})
 const isLoading = ref(false)
 const currentAttempt = ref(1)
-const maxAttempts = ref(10)
 
 // Stores
 const vocabularyStore = useVocabularyStore()
+
+// Add a flag to track initial load
+const isInitialLoad = ref(true)
 
 // Computed
 const gridStyle = computed(() => ({
@@ -309,9 +303,8 @@ function checkAnswers() {
   }
 
   if (allCorrect) {
-    alert('Parabéns! Você completou o nível com sucesso.')
-    currentLevel.value++
-    startGame()
+    alert('Parabéns! Você completou corretamente!')
+    startGame() // Start new game without level increment
   } else {
     console.log('Existem erros em suas respostas. As respostas corretas estão em vermelho.')
   }
@@ -341,57 +334,10 @@ function initializeGrid() {
   // Reset any game state
   currentWord.value = null
   currentDirection.value = 'across'
+
+  grid.value.forEach(row => row.fill(null));
 }
 
-function getWordsForLevel(level) {
-  return vocabularyStore.filteredWords;
-}
-
-function placeWord(word, row, col, direction) {
-  let positions = []
-
-  if (!grid.value || !Array.isArray(grid.value)) {
-    console.error('Grid is not properly initialized');
-    return positions;
-  }
-
-  if (direction === 'across') {
-    if (row < 0 || row >= GRID_ROWS || col < 0 || col + word.length > GRID_COLS) {
-      console.error('Word placement out of bounds');
-      return positions;
-    }
-    if (!grid.value[row]) {
-      console.error(`Row ${row} does not exist in grid`);
-      return positions;
-    }
-    for (let i = 0; i < word.length; i++) {
-      if (grid.value[row][col + i] === undefined) {
-        console.error(`Invalid cell at row ${row}, col ${col + i}`);
-        continue;
-      }
-      grid.value[row][col + i] = word[i]
-      positions.push({ row: row, col: col + i })
-    }
-  } else if (direction === 'down') {
-    if (row < 0 || row + word.length > GRID_ROWS || col < 0 || col >= GRID_COLS) {
-      console.error('Word placement out of bounds');
-      return positions;
-    }
-    for (let i = 0; i < word.length; i++) {
-      if (!grid.value[row + i]) {
-        console.error(`Row ${row + i} does not exist in grid`);
-        continue;
-      }
-      if (grid.value[row + i][col] === undefined) {
-        console.error(`Invalid cell at row ${row + i}, col ${col}`);
-        continue;
-      }
-      grid.value[row + i][col] = word[i]
-      positions.push({ row: row + i, col: col })
-    }
-  }
-  return positions
-}
 
 function canPlaceWord(word, row, col, direction) {
   if (direction === 'across') {
@@ -458,26 +404,6 @@ function isPartOfWord(row, col) {
     }
     return false
   })
-}
-
-function findWordWithCommonCharacters(previousWord, availableWords) {
-  const prevWordChars = new Set(previousWord.split(''));
-
-  const wordsWithCommon = availableWords.filter(wordObj => {
-    const wordChars = new Set(wordObj.word.split(''));
-    for (const char of wordChars) {
-      if (prevWordChars.has(char)) {
-        return true;
-      }
-    }
-    return false;
-  });
-
-  if (wordsWithCommon.length === 0) {
-    return null;
-  }
-
-  return wordsWithCommon[Math.floor(Math.random() * wordsWithCommon.length)];
 }
 
 async function sleep(ms) {
@@ -605,7 +531,7 @@ async function placeRemainingWords(availableWords) {
             direction: selectedPosition.direction,
             positions: positions,
             number: placedWords.value.length + 1,
-            
+
             // Assign a color based on the amount of available colors.
             // color: WORD_COLORS[placedWords.value.length]
             color: WORD_COLORS[placedWords.value.length % WORD_COLORS.length]
@@ -627,12 +553,12 @@ async function placeRemainingWords(availableWords) {
 }
 
 async function generateCrossword(words) {
-  if (currentAttempt.value > maxAttempts.value) {
+  if (currentAttempt.value > 10) {
     console.log('Maximum attempts reached');
     return false;
   }
 
-  console.log(`Attempt ${currentAttempt.value} of ${maxAttempts.value}`);
+  console.log(`Attempt ${currentAttempt.value} of 10`);
   initializeGrid();
 
   // Create a copy of words array to work with
@@ -685,22 +611,30 @@ async function generateCrossword(words) {
   return false;
 }
 
-async function startGame() {
+// Modify the startGame function to handle initial load
+async function startGame(force = false) {
+  if (!force && !isInitialLoad.value) {
+    return // Don't restart if it's not initial load or forced
+  }
+  
   try {
-    isLoading.value = true;
-    currentAttempt.value = 1;
-    const wordsForLevel = getWordsForLevel(currentLevel.value);
-    const success = await generateCrossword(wordsForLevel);
+    isLoading.value = true
+    currentAttempt.value = 1
+    const words = vocabularyStore.filteredWords
+    const success = await generateCrossword(words)
 
-    if (!success) {
-      await startGame(); // Retry if unsuccessful
+    if (!success && currentAttempt.value < 10) {
+      await startGame(true) // Only retry if we haven't reached max attempts
     }
   } catch (error) {
-    console.error('Error generating crossword:', error);
-    await startGame(); // Retry on error
+    console.error('Error generating crossword:', error)
+    if (currentAttempt.value < 10) {
+      await startGame(true) // Only retry if we haven't reached max attempts
+    }
   } finally {
-    isLoading.value = false;
-    clearHighlights();
+    isLoading.value = false
+    clearHighlights()
+    isInitialLoad.value = false // Set initial load to false after first load
   }
 }
 
@@ -741,26 +675,33 @@ onMounted(() => {
   max-height: 80vh;
   /* Maximum height */
   border: 2px solid var(--dark-border-color);
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  -webkit-user-select: none;
+  user-select: none;
+  transform: scale(1);
+  transform-origin: 0 0;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Scrollbar styling */
-#crossword::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 3px;
   height: 3px;
 }
 
-#crossword::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 3px;
 }
 
-#crossword::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background: var(--primary-color);
 
   border-radius: 3px;
 }
 
-#crossword::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
 }
 
@@ -770,6 +711,13 @@ onMounted(() => {
   /* scrollbar-color: var(--primary-color) var(--surface-color); */
 }
 
+.crosswords-game {
+  touch-action: none;
+  /* Prevent zooming on the page */
+  -ms-content-zooming: none;
+  -ms-touch-action: none;
+}
+
 #clues {
   position: sticky;
   top: var(--spacing-md, 1rem);
@@ -777,35 +725,16 @@ onMounted(() => {
   /* Slightly wider */
   flex-shrink: 0;
   padding: var(--spacing-md, 1rem);
-  background: darkslategray;
+  /* background: darkslategray; */
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-sm);
   /* max-height: calc(100vh - 200px);
   overflow-y: auto; */
   height: 100%;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-/* Scrollbar styling for clues container */
-#clues::-webkit-scrollbar {
-  width: 3px;
-}
-
-#clues::-webkit-scrollbar-track {
-  background: var(--surface-color);
-  border-radius: 3px;
-}
-
-#clues::-webkit-scrollbar-thumb {
-  background: var(--primary-color);
-  border-radius: 3px;
-}
-
-#clues::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-color);
+  /* gap: 18px; */
+  max-height: 80vh;
 }
 
 @media (max-width: 768px) {
@@ -894,33 +823,30 @@ onMounted(() => {
 
 #clue-list {
   list-style: none;
-  padding: 0;
+  margin-top: 20px;
+  overflow-y: auto;
 }
 
 #clue-list li {
   margin-bottom: 0px;
   font-size: 1rem;
   text-align: left;
-  color: var(--text-color);
+  /* color: #eee; */
   word-wrap: break-word;
   cursor: pointer;
   padding: 4px;
 }
 
 #clue-list li.highlighted {
-  /* background-color: var(--highlight-color, rgba(255, 255, 0, 0.3)); */
-  border: 2px solid var(--border-color);
-  border-radius: 5px;
+  background-color: var(--highlight-color, rgba(255, 255, 0, 0.3));
   font-size: 1.1rem;
-  /*  */
-
 }
 
 .button-container {
   display: flex;
   gap: 1rem;
   justify-content: center;
-  margin-top: 20px;
+  /* margin-top: 20px; */
 }
 
 #check-button,

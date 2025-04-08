@@ -1,4 +1,4 @@
-# MediQuiz Vue Code Organization Guidelines
+# MediQuix Vue Code Organization Guidelines
 
 ## Project Structure Guidelines
 

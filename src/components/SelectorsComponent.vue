@@ -141,7 +141,7 @@ select {
   width: 100%;
 }
 #specialty-select {
-  width: 200px;
+  max-width: 200px;
 }
 #difficulty-select {
   width: 100px;

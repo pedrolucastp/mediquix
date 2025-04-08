@@ -1,12 +1,15 @@
 <template>
   <header :class="{ dark: isDarkMode }">
     <div class="header-left">
-      <DarkModeToggle />
       <router-link to="/" class="logo">
+        <!-- add the logo (favicon.svg) here -->
+        <img src="@/assets/logo.svg" alt="Logo" width="30" height="30" />
+
         <h1>MediQuix</h1>
       </router-link>
     </div>
     <AuthControls />
+    <DarkModeToggle />
   </header>
 </template>
 
@@ -33,6 +36,7 @@ header {
 
 .header-left {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: var(--spacing-md);
 }
@@ -40,6 +44,10 @@ header {
 .logo {
   text-decoration: none;
   color: var(--accent-color);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .logo h1 {
