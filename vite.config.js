@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'url'
 
 export default defineConfig({
   plugins: [vue()],
-  base: 'https://pedrolucastp.github.io/mediquiz-vue/',
+  base: 'https://pedrolucastp.github.io/mediquix/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

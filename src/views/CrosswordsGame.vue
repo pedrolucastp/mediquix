@@ -16,7 +16,6 @@
                 :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
                 :style="{ backgroundColor: getCellColor(row, col) }"
                  @input="handleInput" 
-                 @keydown="handleKeyDown" 
                  @click="handleCellClick(row, col)" />
 
             </template>
@@ -168,6 +167,11 @@ function handleCellClick(row, col) {
     const word = placedWords.value.find(w => w.number === cellWords[0].wordNumber)
     if (word) {
       highlightWord(word)
+      // Select text in clicked cell
+      const input = cellRefs[`${row}-${col}`]
+      if (input) {
+        input.select()
+      }
     }
   }
 }
@@ -199,9 +203,15 @@ function handleInput(event) {
     }
   }
 
-  // Update value and move to next cell
-  input.value = input.value.slice(-1).toUpperCase()
-  input.select() // Select the text for easy overwriting
+  // Handle backspace (when input becomes empty or no data event)
+  if (!event.data || input.value === '') {
+    input.value = '' // Ensure the current cell is empty
+    moveToPreviousInput(input)
+    return
+  }
+
+  // Handle normal typing (overwrite mode)
+  input.value = event.data.toUpperCase()
   moveToNextInput(input)
 }
 
@@ -244,13 +254,7 @@ function moveToPreviousInput(currentInput) {
   const prevInput = cellRefs[`${prevRow}-${prevCol}`]
   if (prevInput && isInputPartOfCurrentWord(prevInput)) {
     prevInput.focus()
-  }
-}
-
-function handleKeyDown(event) {
-  const input = event.target
-  if (event.key === 'Backspace' && !input.value) {
-    moveToPreviousInput(input)
+    prevInput.select() // Select text in previous cell
   }
 }
 
