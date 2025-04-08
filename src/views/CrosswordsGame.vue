@@ -1,72 +1,55 @@
 <template>
   <div class="crosswords-game">
     <h1>Palavras Cruzadas</h1>
-    <SelectorsComponent
-      @specialty-change="startGame"
-      @difficulty-change="startGame"
-    />
+    <SelectorsComponent @specialty-change="startGame" @difficulty-change="startGame" />
+
 
     <div id="crossword-container">
       <div id="crossword" :style="gridStyle">
         <template v-for="row in gridRows" :key="row">
-          <div
-            v-for="col in gridCols"
-            :key="`${row}-${col}`"
-            class="cell"
-            :class="{ empty: !getCell(row, col) }"
-          >
+          <div v-for="col in gridCols" :key="`${row}-${col}`" class="cell" :class="{ empty: !getCell(row, col) }">
             <template v-if="getCell(row, col)">
               <span v-if="isStartingCell(row, col)" class="clue-number">
                 {{ getWordNumber(row, col) }}
               </span>
-              <input
-                :id="`cell-${row}-${col}`"
-                :ref="el => cellRefs[`${row}-${col}`] = el"
-                maxLength="1"
-                :data-row="row"
-                :data-col="col"
-                :data-correct="getCell(row, col)"
-                :data-words="getCellWords(row, col)"
-                :class="{
+              <input :id="`cell-${row}-${col}`" :ref="el => cellRefs[`${row}-${col}`] = el" maxLength="1"
+                :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
+                :style="{ backgroundColor: getCellColor(row, col) }" :class="{
                   'highlighted': isHighlighted(row, col),
                   'highlighted-intersection': isIntersectionHighlighted(row, col)
-                }"
-                @input="handleInput"
-                @focus="handleInputFocus"
-                @keydown="handleKeyDown"
-                @click="handleCellClick(row, col)"
-              />
-              
+                }" @input="handleInput" @keydown="handleKeyDown" @click="handleCellClick(row, col)" />
+
             </template>
           </div>
         </template>
       </div>
 
       <div id="clues">
-        <h2>Dicas</h2>
+       
+        <!-- <h2>Dicas</h2> -->
         <ul id="clue-list">
-          <li
-            v-for="word in placedWords"
-            :key="word.number"
-            :class="{ 'highlighted': isClueHighlighted(word.number) }"
-            @click="highlightWord(word)"
-            :style="{ color: word.color }"
-          >
+          <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
+            @click="highlightWord(word)" :style="{ color: word.color }" alt="{{ word.word }}">
             {{ word.number }}. {{ word.clue }}
             ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
           </li>
         </ul>
       </div>
+      
     </div>
-    
+    <div class="button-container">
+          <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
+          <button id="new-game-button" @click="startGame">Novo Jogo</button>
+        </div>
+
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-message">
         <p>Gerando palavras cruzadas...</p>
         <p>Tentativa {{ currentAttempt }} de {{ maxAttempts }}</p>
       </div>
     </div>
-    
-    <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
+
+
   </div>
 </template>
 
@@ -83,7 +66,7 @@ const WORD_COLORS = [
   '#4ECDC4', // turquoise
   '#45B7D1', // sky blue
   '#96CEB4', // sage green
-  '#FFEEAD', // soft yellow
+  '#ff24c0', // pink
   '#D4A5A5', // dusty rose
   '#9B97B2', // muted purple
   '#FFB347', // pastel orange
@@ -93,15 +76,6 @@ const WORD_COLORS = [
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
 const GRID_CENTER_ROW = Math.floor(GRID_ROWS / 2)
 const GRID_CENTER_COL = Math.floor(GRID_COLS / 2)
-
-// Add after the constants
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
 
 // Refs
 const currentLevel = ref(1)
@@ -145,6 +119,13 @@ function getCellWords(row, col) {
   })))
 }
 
+function getCellColor(row, col) {
+  const cellWords = placedWords.value.filter(word => {
+    return word.positions.some(pos => pos.row === row && pos.col === col)
+  })
+  return cellWords.length > 0 ? cellWords[0].color + '90' : 'transparent' // Adding 40 for 25% opacity
+}
+
 function isStartingCell(row, col) {
   return placedWords.value.some(word => {
     if (word.row === row && word.col === col) {
@@ -173,11 +154,11 @@ function isClueHighlighted(number) {
 
 function highlightWord(wordObj) {
   clearHighlights()
-  
+
   wordObj.positions.forEach(pos => {
     highlightedCells.value.add(`${pos.row}-${pos.col}`)
   })
-  
+
   highlightedClue.value = wordObj.number
 }
 
@@ -204,40 +185,30 @@ function normalizeString(str) {
     .trim()
 }
 
-function handleInputFocus(event) {
+function handleInput(event) {
   const input = event.target
   const cellWords = JSON.parse(input.dataset.words || '[]')
-  if (cellWords && cellWords.length > 0) {
+
+  // Set direction and highlight word if needed
+  if (cellWords && cellWords.length > 0 && (!currentWord.value || !isInputPartOfCurrentWord(input))) {
     currentWord.value = cellWords[0]
-    currentDirection.value = currentWord.value.direction
-    
+    currentDirection.value = cellWords[0].direction
     const word = placedWords.value.find(w => w.number === cellWords[0].wordNumber)
     if (word) {
       highlightWord(word)
     }
   }
-}
 
-function handleInput(event) {
-  const input = event.target
-  input.value = input.value.toUpperCase()
-  
-  const normalizedValue = normalizeString(input.value)
-  const normalizedCorrect = normalizeString(input.dataset.correct)
-  
-  if (normalizedValue === normalizedCorrect) {
-    input.style.backgroundColor = '#e6ffe6'
-  } else {
-    input.style.backgroundColor = 'transparent'
-  }
-  
+  // Update value and move to next cell
+  input.value = input.value.slice(-1).toUpperCase()
+  input.select() // Select the text for easy overwriting
   moveToNextInput(input)
 }
 
 function moveToNextInput(currentInput) {
   const currentRow = parseInt(currentInput.dataset.row)
   const currentCol = parseInt(currentInput.dataset.col)
-  
+
   if (!currentWord.value || !currentDirection.value) return
 
   let nextRow = currentRow
@@ -258,7 +229,7 @@ function moveToNextInput(currentInput) {
 function moveToPreviousInput(currentInput) {
   const currentRow = parseInt(currentInput.dataset.row)
   const currentCol = parseInt(currentInput.dataset.col)
-  
+
   if (!currentWord.value || !currentDirection.value) return
 
   let prevRow = currentRow
@@ -284,15 +255,29 @@ function handleKeyDown(event) {
 }
 
 function isInputPartOfCurrentWord(input) {
+  if (!currentWord.value || !currentDirection.value) return false;
+
   const cellWords = JSON.parse(input.dataset.words || '[]')
-  if (cellWords && currentWord.value) {
-    return cellWords.some(
-      word =>
-        word.wordNumber === currentWord.value.wordNumber &&
-        word.direction === currentWord.value.direction
-    )
+  if (!cellWords || cellWords.length === 0) return false;
+
+  // Check if any word in this cell matches our current direction and is part of our path
+  const currentWordObj = placedWords.value.find(w => w.number === currentWord.value.wordNumber);
+  if (!currentWordObj) return false;
+
+  // Get the input's position
+  const row = parseInt(input.dataset.row);
+  const col = parseInt(input.dataset.col);
+
+  // Check if this position is part of our current word's path
+  if (currentDirection.value === 'across') {
+    return row === currentWordObj.row &&
+      col >= currentWordObj.col &&
+      col < currentWordObj.col + currentWordObj.word.length;
+  } else {
+    return col === currentWordObj.col &&
+      row >= currentWordObj.row &&
+      row < currentWordObj.row + currentWordObj.word.length;
   }
-  return false
 }
 
 function checkAnswers() {
@@ -322,21 +307,38 @@ function checkAnswers() {
 }
 
 function initializeGrid() {
+  // Clear the grid array
   grid.value = []
   for (let i = 0; i < GRID_ROWS; i++) {
     grid.value.push(new Array(GRID_COLS).fill(null))
   }
+
+  // Clear all input values and styling
+  for (const key in cellRefs) {
+    const input = cellRefs[key]
+    if (input) {
+      input.value = ''
+      input.style.backgroundColor = 'transparent'
+      input.style.color = 'var(--text-color)'
+    }
+  }
+
+  // Clear placed words and highlights
   placedWords.value = []
+  clearHighlights()
+
+  // Reset any game state
+  currentWord.value = null
+  currentDirection.value = 'across'
 }
 
 function getWordsForLevel(level) {
-  // Get ALL filtered words instead of just 10
-  return vocabularyStore.words.filter(wordObj => wordObj.isActive)
+  return vocabularyStore.filteredWords;
 }
 
 function placeWord(word, row, col, direction) {
   let positions = []
-  
+
   if (!grid.value || !Array.isArray(grid.value)) {
     console.error('Grid is not properly initialized');
     return positions;
@@ -391,12 +393,12 @@ function canPlaceWord(word, row, col, direction) {
         if (currentCell !== word[i]) return false;
         hasIntersection = true;
       }
-      
+
       const above = row > 0 ? grid.value[row - 1][col + i] : null;
       const below = row < GRID_ROWS - 1 ? grid.value[row + 1][col + i] : null;
-      
-      if ((above && !isPartOfWord(row - 1, col + i)) || 
-          (below && !isPartOfWord(row + 1, col + i))) {
+
+      if ((above && !isPartOfWord(row - 1, col + i)) ||
+        (below && !isPartOfWord(row + 1, col + i))) {
         return false;
       }
     }
@@ -417,12 +419,12 @@ function canPlaceWord(word, row, col, direction) {
         if (currentCell !== word[i]) return false;
         hasIntersection = true;
       }
-      
+
       const left = col > 0 ? grid.value[row + i][col - 1] : null;
       const right = col < GRID_COLS - 1 ? grid.value[row + i][col + 1] : null;
-      
-      if ((left && !isPartOfWord(row + i, col - 1)) || 
-          (right && !isPartOfWord(row + i, col + 1))) {
+
+      if ((left && !isPartOfWord(row + i, col - 1)) ||
+        (right && !isPartOfWord(row + i, col + 1))) {
         return false;
       }
     }
@@ -449,7 +451,7 @@ function isPartOfWord(row, col) {
 
 function findWordWithCommonCharacters(previousWord, availableWords) {
   const prevWordChars = new Set(previousWord.split(''));
-  
+
   const wordsWithCommon = availableWords.filter(wordObj => {
     const wordChars = new Set(wordObj.word.split(''));
     for (const char of wordChars) {
@@ -459,11 +461,11 @@ function findWordWithCommonCharacters(previousWord, availableWords) {
     }
     return false;
   });
-  
+
   if (wordsWithCommon.length === 0) {
     return null;
   }
-  
+
   return wordsWithCommon[Math.floor(Math.random() * wordsWithCommon.length)];
 }
 
@@ -488,7 +490,7 @@ async function visualizePlacement(word, row, col, direction, temp = true) {
       }
     }
   }
-  
+
   if (temp) {
     await sleep(PLACEMENT_DELAY);
     positions.forEach(pos => {
@@ -502,7 +504,7 @@ async function visualizePlacement(word, row, col, direction, temp = true) {
 
 function countIntersections(word, row, col, direction) {
   let intersections = 0;
-  
+
   if (direction === 'across') {
     for (let i = 0; i < word.length; i++) {
       if (grid.value[row][col + i] !== null && grid.value[row][col + i] === word[i]) {
@@ -516,129 +518,91 @@ function countIntersections(word, row, col, direction) {
       }
     }
   }
-  
+
   return intersections;
 }
 
-async function generateCrossword(wordList) {
-  currentAttempt.value = 1;
-  console.log('Total word pool:', wordList.length, 'words');
-  
-  while (currentAttempt.value <= maxAttempts.value) {
-    initializeGrid();
-    let availableWords = [...wordList];
-    console.log(`Attempt ${currentAttempt.value} with ${availableWords.length} available words`);
+function findAllPossiblePositions(word, direction) {
+  const positions = [];
 
-    let firstWordPlaced = false;
-    let triedIndices = new Set();
+  for (let row = 0; row < GRID_ROWS; row++) {
+    for (let col = 0; col < GRID_COLS; col++) {
+      if (canPlaceWord(word, row, col, direction)) {
+        const intersections = countIntersections(word, row, col, direction);
+        positions.push({
+          row,
+          col,
+          direction,
+          intersections
+        });
+      }
+    }
+  }
 
-    while (!firstWordPlaced && triedIndices.size < availableWords.length) {
+  // Sort by number of intersections in descending order
+  positions.sort((a, b) => b.intersections - a.intersections);
+
+  return positions;
+}
+
+async function placeRemainingWords(availableWords) {
+
+  while (placedWords.value.length < 10) {
+    let placed = false;
+    const triedIndices = new Set();
+
+    // Keep trying random words until we place one or exhaust all options
+    while (!placed && triedIndices.size < availableWords.length) {
       let randomIndex;
       do {
         randomIndex = Math.floor(Math.random() * availableWords.length);
       } while (triedIndices.has(randomIndex));
-      
+
       triedIndices.add(randomIndex);
-      const firstWord = availableWords[randomIndex];
-      console.log('Trying first word:', firstWord.word);
-      
-      // Randomize first word direction
-      const direction = Math.random() > 0.5 ? 'across' : 'down';
-      console.log('First word direction:', direction);
-      
-      // Calculate start position based on direction
-      const startRow = direction === 'across' 
-        ? GRID_CENTER_ROW 
-        : GRID_CENTER_ROW - Math.floor(firstWord.word.length / 2);
-      const startCol = direction === 'across'
-        ? GRID_CENTER_COL - Math.floor(firstWord.word.length / 2)
-        : GRID_CENTER_COL;
-      
-      if (canPlaceWord(firstWord.word, startRow, startCol, direction)) {
-        const positions = await visualizePlacement(firstWord.word, startRow, startCol, direction, false);
+      const word = availableWords[randomIndex];
+      const allPossiblePositions = [];
+
+      // Find all possible positions in both directions
+      for (const direction of ['across', 'down']) {
+        const positionsInDirection = await findAllPossiblePositions(word.word, direction);
+        allPossiblePositions.push(...positionsInDirection);
+      }
+
+      // If we found valid positions
+      if (allPossiblePositions.length > 0) {
+        // Sort by intersections
+        allPossiblePositions.sort((a, b) => b.intersections - a.intersections);
+
+        // Take top 3 positions when available
+        const topPositions = allPossiblePositions.slice(0, Math.min(3, allPossiblePositions.length));
+
+        // Randomly select from top positions
+        const selectedPosition = topPositions[Math.floor(Math.random() * topPositions.length)];
+
+        // Visualize the attempt
+        await visualizePlacement(word.word, selectedPosition.row, selectedPosition.col, selectedPosition.direction, true);
+
+        // Place the word
+        const positions = await visualizePlacement(word.word, selectedPosition.row, selectedPosition.col, selectedPosition.direction, false);
+
         if (positions.length > 0) {
-          placedWords.value = [{
-            word: firstWord.word,
-            clue: firstWord.clue,
-            row: startRow,
-            col: startCol,
-            direction: direction,
+          placedWords.value.push({
+            word: word.word,
+            clue: word.clue,
+            row: selectedPosition.row,
+            col: selectedPosition.col,
+            direction: selectedPosition.direction,
             positions: positions,
-            number: 1,
-            color: WORD_COLORS[0]
-          }];
+            number: placedWords.value.length + 1,
+            color: WORD_COLORS[placedWords.value.length]
+          });
           availableWords.splice(randomIndex, 1);
-          firstWordPlaced = true;
-          
-          const success = await placeRemainingWords(availableWords);
-          if (success) {
-            return true;
-          }
+          placed = true;
+          break;
         }
       }
     }
-    
-    currentAttempt.value++;
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
 
-  return false;
-}
-
-async function placeRemainingWords(availableWords) {
-  console.log('Trying to place remaining words. Pool size:', availableWords.length);
-  
-  while (placedWords.value.length < 10) {
-    let placed = false;
-    
-    // Shuffle words before trying placement
-    shuffleArray(availableWords);
-    
-    // Try each word in random order
-    for (let i = 0; i < availableWords.length && !placed; i++) {
-      const word = availableWords[i];
-      
-      // Randomize direction order
-      const directions = Math.random() > 0.5 ? ['across', 'down'] : ['down', 'across'];
-      
-      // Get random starting positions
-      const rows = shuffleArray([...Array(GRID_ROWS).keys()]);
-      const cols = shuffleArray([...Array(GRID_COLS).keys()]);
-      
-      for (const direction of directions) {
-        for (const row of rows) {
-          for (const col of cols) {
-            if (canPlaceWord(word.word, row, col, direction)) {
-              await visualizePlacement(word.word, row, col, direction, true);
-              const intersections = countIntersections(word.word, row, col, direction);
-              
-              if (intersections > 0 || placedWords.value.length === 0) {
-                const positions = await visualizePlacement(word.word, row, col, direction, false);
-                if (positions.length > 0) {
-                  placedWords.value.push({
-                    word: word.word,
-                    clue: word.clue,
-                    row: row,
-                    col: col,
-                    direction: direction,
-                    positions: positions,
-                    number: placedWords.value.length + 1,
-                    color: WORD_COLORS[placedWords.value.length]
-                  });
-                  availableWords.splice(i, 1);
-                  placed = true;
-                  console.log(`Placed word ${placedWords.value.length}/10. Remaining pool:`, availableWords.length);
-                  break;
-                }
-              }
-            }
-          }
-          if (placed) break;
-        }
-        if (placed) break;
-      }
-    }
-    
     if (!placed) {
       console.log('No more words can be placed with current configuration');
       return false;
@@ -648,13 +612,72 @@ async function placeRemainingWords(availableWords) {
   return placedWords.value.length === 10;
 }
 
+async function generateCrossword(words) {
+  if (currentAttempt.value > maxAttempts.value) {
+    console.log('Maximum attempts reached');
+    return false;
+  }
+
+  console.log(`Attempt ${currentAttempt.value} of ${maxAttempts.value}`);
+  initializeGrid();
+
+  // Create a copy of words array to work with
+  const availableWords = [...words];
+  const triedIndices = new Set();
+
+  // Try to place first word
+  while (triedIndices.size < availableWords.length) {
+    let randomIndex;
+    do {
+      randomIndex = Math.floor(Math.random() * availableWords.length);
+
+    } while (triedIndices.has(randomIndex));
+
+    triedIndices.add(randomIndex);
+    const firstWord = availableWords[randomIndex];
+
+    // Try to place the first word horizontally in the center
+    const positions = await visualizePlacement(
+      firstWord.word,
+      GRID_CENTER_ROW,
+      Math.floor(GRID_CENTER_COL - firstWord.word.length / 2),
+      'across',
+      false
+    );
+
+    if (positions.length > 0) {
+      placedWords.value.push({
+        word: firstWord.word,
+        clue: firstWord.clue,
+        row: GRID_CENTER_ROW,
+        col: Math.floor(GRID_CENTER_COL - firstWord.word.length / 2),
+        direction: 'across',
+        positions: positions,
+        number: 1,
+        color: WORD_COLORS[0]
+      });
+
+      availableWords.splice(randomIndex, 1);
+
+      // Try to place remaining words with the new strategy
+      const success = await placeRemainingWords(availableWords);
+      if (success) {
+        return true;
+      }
+    }
+  }
+
+  currentAttempt.value++;
+  return false;
+}
+
 async function startGame() {
   try {
     isLoading.value = true;
     currentAttempt.value = 1;
     const wordsForLevel = getWordsForLevel(currentLevel.value);
     const success = await generateCrossword(wordsForLevel);
-    
+
     if (!success) {
       await startGame(); // Retry if unsuccessful
     }
@@ -674,17 +697,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 #crossword-container {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--spacing-lg, 2rem);
   padding: var(--spacing-md, 1rem);
-  max-width: 1400px; /* Increased max-width */
+  max-width: 1400px;
+  /* Increased max-width */
   margin: 0 auto;
   width: 100%;
-  min-height: calc(100vh - 200px); /* Add minimum height */
+  min-height: calc(100vh - 200px);
+  /* Add minimum height */
 }
 
 #crossword {
@@ -692,25 +716,36 @@ onMounted(() => {
   gap: 0;
   margin: 0 auto;
   width: max-content;
-  padding: 2rem; /* Increased padding */
+  padding: 2rem;
+  /* Increased padding */
   background: var(--surface-color, #fff);
-  border-radius: var(--radius-md); /* Use design system variable */
-  box-shadow: var(--shadow-md); /* Stronger shadow */
+  border-radius: var(--radius-md);
+  /* Use design system variable */
+  box-shadow: var(--shadow-md);
+  /* Stronger shadow */
   overflow: auto;
-  max-height: 80vh; /* Maximum height */
+  max-height: 80vh;
+  /* Maximum height */
 }
 
 #clues {
   position: sticky;
   top: var(--spacing-md, 1rem);
-  width: 350px; /* Slightly wider */
+  width: 350px;
+  /* Slightly wider */
   flex-shrink: 0;
   padding: var(--spacing-md, 1rem);
-  background: var(--surface-color, #fff);
+  background: darkslategrey;
+  /* Changed background color */
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-sm);
-  max-height: calc(100vh - 200px);
+  /* max-height: calc(100vh - 200px);
+  overflow-y: auto; */
+  height: 100%;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 @media (max-width: 768px) {
@@ -740,8 +775,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-color);
-  background-color: var(--secondary-color);
+  border: 1px solid var(--dark-border-color);
+  /* background-color: var(--secondary-color); */
 }
 
 .empty {
@@ -761,6 +796,7 @@ onMounted(() => {
   background: transparent;
   text-transform: uppercase;
   box-sizing: border-box;
+  border-radius: 0;
 }
 
 .cell:hover {
@@ -786,13 +822,14 @@ onMounted(() => {
   font-size: var(--clue-number-size, 0.75rem);
   font-weight: bold;
   color: var(--text-color);
+  width: 0;
 }
 
-#clues h2 {
+/* #clues h2 {
   font-size: 24px;
   margin-bottom: 10px;
   color: var(--text-color);
-}
+} */
 
 #clue-list {
   list-style: none;
@@ -804,14 +841,22 @@ onMounted(() => {
   font-size: 1rem;
   text-align: left;
   color: var(--text-color);
+  word-wrap: break-word;
 }
 
 #clue-list li.highlighted {
   background-color: var(--highlight-color, rgba(255, 255, 0, 0.3));
 }
 
-#check-button {
+.button-container {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
   margin-top: 20px;
+}
+
+#check-button,
+#new-game-button {
   padding: 10px 20px;
   font-size: 16px;
   background-color: var(--primary-color);
@@ -821,7 +866,8 @@ onMounted(() => {
   cursor: pointer;
 }
 
-#check-button:hover {
+#check-button:hover,
+#new-game-button:hover {
   background-color: var(--accent-color);
 }
 
@@ -830,7 +876,7 @@ onMounted(() => {
     width: 100%;
     height: 100%;
   }
-  
+
   .cell input {
     font-size: 14px;
   }
@@ -890,9 +936,9 @@ onMounted(() => {
   color: var(--dark-text-color);
 }
 
-:deep(.dark) #clues h2 {
+/* :deep(.dark) #clues h2 {
   color: var(--dark-text-color);
-}
+} */
 
 :deep(.dark) #clue-list li {
   color: var(--dark-text-color);
