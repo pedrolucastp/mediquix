@@ -888,7 +888,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -905,7 +905,7 @@ onMounted(() => {
 }
 
 :deep(.dark) .loading-overlay {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 :deep(.dark) .cell {
