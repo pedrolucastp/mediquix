@@ -727,7 +727,32 @@ onMounted(() => {
   max-height: 80vh;
   /* Maximum height */
   border: 2px solid var(--dark-border-color);
+}
 
+/* Scrollbar styling */
+#crossword::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+#crossword::-webkit-scrollbar-track {
+  background: var(--surface-color);
+  border-radius: 3px;
+}
+
+#crossword::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+#crossword::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+/* Firefox */
+#crossword {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) var(--surface-color);
 }
 
 #clues {
@@ -748,6 +773,25 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* Scrollbar styling for clues container */
+#clues::-webkit-scrollbar {
+  width: 3px;
+}
+
+#clues::-webkit-scrollbar-track {
+  background: var(--surface-color);
+  border-radius: 3px;
+}
+
+#clues::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+#clues::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
 }
 
 @media (max-width: 768px) {
