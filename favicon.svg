@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- Define gradient -->
+    <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#6366f1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    
+    <!-- Background with gradient -->
+    <rect width="32" height="32" rx="6" fill="url(#grad)"/>
+    
+    <!-- Medical Cross -->
+    <rect x="14" y="6" width="4" height="12" fill="white"/>
+    <rect x="10" y="10" width="12" height="4" fill="white"/>
+    
+    <!-- Letter M -->
+    <path d="M8 16 L11 16 L16 21 L21 16 L24 16 L24 26 L21 26 L21 20 L16 25 L11 20 L11 26 L8 26 Z" fill="white"/>
+    
+    <!-- Underline for M -->
+    <rect x="8" y="27" width="16" height="1.5" fill="white"/>
+</svg>
