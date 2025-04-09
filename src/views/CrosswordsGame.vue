@@ -50,8 +50,8 @@ import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
-const GAME_ATTEMPTS = 3;
-const WORD_COUNT = 2
+const GAME_ATTEMPTS = 5;
+const WORD_COUNT = 5
 const GRID_ROWS = 25
 const GRID_COLS = 30
 const WORD_COLORS = [
