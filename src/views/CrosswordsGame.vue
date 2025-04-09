@@ -3,7 +3,8 @@
     <div id="crossword-container">
       <div id="crossword" :style="gridStyle">
         <template v-for="row in gridRows" :key="row">
-          <div v-for="col in gridCols" :key="`${row}-${col}`" class="cell" :class="{ empty: !getCell(row, col) }">
+          <div v-for="col in gridCols" :key="`${row}-${col}`" class="cell" :class="{ empty: !getCell(row, col) }"
+            :style="getCell(row, col) ? getHighlightedCellBorder(row, col) : {}">
             <template v-if="getCell(row, col)">
               <span v-if="isStartingCell(row, col)" class="clue-number">
                 {{ getWordNumber(row, col) }}
@@ -12,41 +13,33 @@
                 :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
                 :style="{ backgroundColor: getCellColor(row, col) }" @input="handleInput"
                 @click="handleCellClick(row, col)" />
-
             </template>
           </div>
         </template>
       </div>
 
       <div id="clues">
-        <!-- <h2>Dicas</h2> -->
         <h1>Palavras Cruzadas</h1>
         <SelectorsComponent @specialty-change="startGame(true)" @difficulty-change="startGame(true)" />
         <div class="button-container">
           <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
           <button id="new-game-button" @click="startGame(true)">Novo Jogo</button>
         </div>
-        <ul id="clue-list">
+        <ul id="clue-list" :style="{ display: isLoading ? 'none' : 'block' }">
           <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
-            @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}`, fontSize: isLoading ? '0' : 'inherit', padding: isLoading ? '0' : 'inherit' }" :title="word.word">
+            @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}` }" :title="word.word">
             {{ word.number }}. {{ word.clue }}
             ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
           </li>
         </ul>
-
       </div>
-
     </div>
-
-
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-message">
         <p>Gerando palavras cruzadas...</p>
-        <p>Tentativa {{ currentAttempt }} de 10</p>
+        <p>Tentativa {{ currentAttempt }} de {{ GAME_ATTEMPTS }}</p>
       </div>
     </div>
-
-
   </div>
 </template>
 
@@ -56,9 +49,9 @@ import { useVocabularyStore } from '@/store/vocabularyStore'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
-const PLACEMENT_DELAY = 200; // 500ms delay between attempts
-const GAME_ATTEMPTS = 10;
-const WORD_COUNT = 10
+const PLACEMENT_DELAY = 20; // 500ms delay between attempts
+const GAME_ATTEMPTS = 3;
+const WORD_COUNT = 2
 const GRID_ROWS = 25
 const GRID_COLS = 30
 const WORD_COLORS = [
@@ -94,6 +87,9 @@ const vocabularyStore = useVocabularyStore()
 // Add a flag to track initial load
 const isInitialLoad = ref(true)
 
+// Add to the refs section
+const lastClickedCell = ref({ row: null, col: null, wordIndex: 0 })
+
 // Computed
 const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${GRID_COLS}, 30px)`,
@@ -122,7 +118,87 @@ function getCellColor(row, col) {
   const cellWords = placedWords.value.filter(word => {
     return word.positions.some(pos => pos.row === row && pos.col === col)
   })
-  return cellWords.length > 0 ? getCell(row, col) === ' ' ? 'white' : cellWords[0].color + ((isHighlighted(row, col) || isIntersectionHighlighted(row, col)) ? '' : '70') : 'transparent' // Adding 40 for 25% opacity
+  return cellWords.length > 0 ? getCell(row, col) === ' ' ? 'white' : cellWords[0].color + ((isHighlighted(row, col) || isIntersectionHighlighted(row, col)) ? '' : '70') : 'transparent';
+}
+
+//Function to help to determine the border of a highlited cell when a word is selected, apply a 3px solid darkgrey;
+// when the word is in horizontal direction, 
+// all cells of the current selected word should have border on top and bottom;
+// the first cell should also have border on left;
+// the last  cell should also have border on right; 
+
+// when the word is in vertical direction,
+// all cells of the current selected word should have border on left and right;
+// the first cell should also have border on top;
+// the last cell should also have border on bottom;
+
+function getHighlightedCellBorder(row, col) {
+  const cellWords = placedWords.value.filter(word => {
+    return word.positions.some(pos => pos.row === row && pos.col === col)
+  })
+
+  if (cellWords.length === 0) return {};
+
+  // Initialize default border style
+  const styles = {
+    border: '1px solid var(--dark-border-color)',
+    backgroundColor: 'transparent'
+  };
+
+  let hasHighlightedHorizontal = false;
+  let hasHighlightedVertical = false;
+
+  // First pass: check if we have any highlighted words
+  cellWords.forEach(word => {
+    const positions = word.positions.map(pos => `${pos.row}-${pos.col}`);
+    const isHighlightedWord = positions.some(pos => highlightedCells.value.has(pos));
+    
+    if (isHighlightedWord) {
+      styles.backgroundColor = 'rgba(255, 255, 0, 0.1)';
+      if (word.direction === 'across') {
+        hasHighlightedHorizontal = true;
+      } else {
+        hasHighlightedVertical = true;
+      }
+    }
+  });
+
+  // Second pass: apply borders based on direction
+  if (hasHighlightedHorizontal) {
+    styles.borderTop = '3px solid darkgrey';
+    styles.borderBottom = '3px solid darkgrey';
+  }
+  if (hasHighlightedVertical) {
+    styles.borderLeft = '3px solid darkgrey';
+    styles.borderRight = '3px solid darkgrey';
+  }
+
+  // Third pass: handle edges
+  cellWords.forEach(word => {
+    const positions = word.positions.map(pos => `${pos.row}-${pos.col}`);
+    const isHighlightedWord = positions.some(pos => highlightedCells.value.has(pos));
+    
+    if (isHighlightedWord) {
+      if (word.direction === 'across' && hasHighlightedHorizontal) {
+        if (positions[0] === `${row}-${col}`) {
+          styles.borderLeft = '3px solid darkgrey';
+        }
+        if (positions[positions.length - 1] === `${row}-${col}`) {
+          styles.borderRight = '3px solid darkgrey';
+        }
+      }
+      if (word.direction === 'down' && hasHighlightedVertical) {
+        if (positions[0] === `${row}-${col}`) {
+          styles.borderTop = '3px solid darkgrey';
+        }
+        if (positions[positions.length - 1] === `${row}-${col}`) {
+          styles.borderBottom = '3px solid darkgrey';
+        }
+      }
+    }
+  });
+
+  return styles;
 }
 
 function isStartingCell(row, col) {
@@ -163,15 +239,25 @@ function highlightWord(wordObj) {
 
 function handleCellClick(row, col) {
   const cellWords = JSON.parse(getCellWords(row, col))
-  if (cellWords.length > 0) {
-    const word = placedWords.value.find(w => w.number === cellWords[0].wordNumber)
-    if (word) {
-      highlightWord(word)
-      // Select text in clicked cell
-      const input = cellRefs[`${row}-${col}`]
-      if (input) {
-        input.select()
-      }
+  if (cellWords.length === 0) return
+
+  // Reset word index if clicking a different cell
+  if (lastClickedCell.value.row !== row || lastClickedCell.value.col !== col) {
+    lastClickedCell.value = { row, col, wordIndex: 0 }
+  } else {
+    // Cycle through words at the same cell
+    lastClickedCell.value.wordIndex = (lastClickedCell.value.wordIndex + 1) % cellWords.length
+  }
+
+  const selectedWord = placedWords.value.find(w => 
+    w.number === cellWords[lastClickedCell.value.wordIndex].wordNumber
+  )
+
+  if (selectedWord) {
+    highlightWord(selectedWord)
+    const input = cellRefs[`${row}-${col}`]
+    if (input) {
+      input.select()
     }
   }
 }
@@ -622,7 +708,7 @@ function scrollToGridCenter() {
     crosswordDiv.scrollTo({
       left: scrollLeft,
       top: scrollTop,
-      // behavior: 'smooth'
+      behavior: 'smooth'
     })
   }
 }
@@ -634,21 +720,14 @@ async function startGame(force = false) {
   
   try {
     isLoading.value = true
-    // currentAttempt.value = 1
     const words = vocabularyStore.filteredWords
     const success = await generateCrossword(words)
 
     if (!success && currentAttempt.value < GAME_ATTEMPTS) {
       await startGame(true)
-    // } else if (success) {
-      // Add small delay to ensure grid is fully rendered
-      // setTimeout(() => scrollToGridCenter(), 100)
     }
   } catch (error) {
     console.error('Error generating crossword:', error)
-    if (currentAttempt.value < GAME_ATTEMPTS) {
-      await startGame(true)
-    }
   } finally {
     isLoading.value = false
     clearHighlights()
@@ -670,29 +749,44 @@ onMounted(() => {
   gap: var(--spacing-lg, 2rem);
   padding: var(--spacing-md, 1rem);
   max-width: 1400px;
-  /* Increased max-width */
   margin: 0 auto;
   width: 100%;
   min-height: calc(100vh - 200px);
-  /* Add minimum height */
   position: relative;
 }
+
+.crosswords-game {
+  touch-action: none;
+  /* Prevent zooming on the page */
+  -ms-content-zooming: none;
+  -ms-touch-action: none;
+}
+
+#clues {
+  position: absolute;
+  top: var(--spacing-md, 1rem);
+  left: var(--spacing-md, 1rem);
+  width: 350px;
+  flex-shrink: 0;
+  padding: var(--spacing-md, 1rem);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-sm);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
 
 #crossword {
   display: grid;
   gap: 0;
-  margin: 0 auto;
-  width: max-content;
-  padding: 2rem;
-  /* Increased padding */
-  background: #eee;
+  margin: 0;
+  padding: 2rem 2rem 2rem 350px;
   border-radius: var(--radius-md);
-  /* Use design system variable */
   box-shadow: var(--shadow-md);
-  /* Stronger shadow */
   overflow: auto;
   max-height: 80vh;
-  /* Maximum height */
   border: 2px solid var(--dark-border-color);
   touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
@@ -701,7 +795,7 @@ onMounted(() => {
   transform: scale(1);
   transform-origin: center;
   touch-action: pan-x pan-y pinch-zoom;
-  max-width: 80vw;
+  width: 100%;
   position: relative;
 }
 
@@ -732,32 +826,6 @@ onMounted(() => {
   /* scrollbar-color: var(--primary-color) var(--surface-color); */
 }
 
-.crosswords-game {
-  touch-action: none;
-  /* Prevent zooming on the page */
-  -ms-content-zooming: none;
-  -ms-touch-action: none;
-}
-
-#clues {
-  position: sticky;
-  top: var(--spacing-md, 1rem);
-  width: 350px;
-  /* Slightly wider */
-  flex-shrink: 0;
-  padding: var(--spacing-md, 1rem);
-  /* background: darkslategray; */
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-sm);
-  /* max-height: calc(100vh - 200px);
-  overflow-y: auto; */
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  /* gap: 18px; */
-  max-height: 80vh;
-}
-
 @media (max-width: 768px) {
   #crossword-container {
     flex-direction: column;
@@ -786,8 +854,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--dark-border-color);
-  /* background-color: var(--secondary-color); */
+  /* Remove the default border since we handle it in getHighlightedCellBorder */
+  /* border: 1px solid var(--dark-border-color); */
 }
 
 .empty {
@@ -846,6 +914,7 @@ onMounted(() => {
   list-style: none;
   margin-top: 20px;
   overflow-y: auto;
+  list-style-position: outside;
 }
 
 #clue-list li {
@@ -874,9 +943,11 @@ onMounted(() => {
 #new-game-button {
   padding: 8px 20px;
   font-size: 14px;
-  background-color: var(--primary-color);
-  color: #fff;
-  border: none;
+  /* background-color: var(--primary-color); */
+  background: #eee;
+
+  /* color: #fff; */
+  /* border: none; */
   border-radius: 5px;
   cursor: pointer;
 }
