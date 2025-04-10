@@ -13,9 +13,9 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useDarkModeStore } from "@/store/darkModeStore";
-const darkModeStore = useDarkModeStore();
-const isDarkMode = computed(() => darkModeStore.isDarkMode);
+import { useUIStore } from "@/store/ui";
+const uiStore = useUIStore();
+const isDarkMode = computed(() => uiStore.isDarkMode);
 
 // Define props
 defineProps({
@@ -116,7 +116,7 @@ defineProps({
 @media only screen and (max-width: 768px) {
   .game-card {
     width: 100%;
-    margin: var(--spacing-sm);
+    margin: var(--spacing-sm) 0;
     padding: var(--spacing-lg);
   }
 

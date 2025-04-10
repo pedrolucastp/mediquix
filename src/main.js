@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import { createPinia } from 'pinia'
 import { useAuthStore } from './store/auth'
-import { useUIStore } from './store/ui'
+import { useUIStore } from './store/ui/index'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import './assets/icons'
 
@@ -23,7 +23,7 @@ const initializeApp = async () => {
   document.documentElement.classList.toggle('dark', uiStore.isDarkMode)
 
   // Wait for auth initialization before mounting
-  await authStore.initAuthState()
+  await authStore.initializeAuth()
 
   app.mount('#app')
 }

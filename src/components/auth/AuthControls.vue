@@ -5,8 +5,10 @@
     </template>
     <template v-else>
       <template v-if="!authStore.user">
+        <!-- show text only in button for desktop device -->
         <BaseButton variant="primary" icon="sign-in-alt" @click="openAuthModal">
-          Login / Sign Up
+          <span class="desktop-only">Login / Sign Up</span>
+          <!-- <span class="mobile-only">Login</span> -->
         </BaseButton>
       </template>
       <div v-else class="user-area">
@@ -39,7 +41,7 @@
         <BaseButton class="modal-btn" icon="sign-in-alt" @click="handleLogin">
           Login
         </BaseButton>
-        <p>
+        <p class="login-or-signup-message">
           Don't have an account?
           <a class="toggle-link" @click="toggleForm">Sign up</a>
         </p>
@@ -121,7 +123,6 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
-import { useVocabularyStore } from '@/store/vocabulary';
 import { useUIStore } from '@/store/ui';
 import { specialties } from '@/data/defaultSpecialties';
 import BaseButton from '@/components/base/BaseButton.vue';
@@ -130,7 +131,6 @@ import BaseSelect from '@/components/base/BaseSelect.vue';
 import BaseModal from '@/components/base/BaseModal.vue';
 
 const authStore = useAuthStore();
-const vocabularyStore = useVocabularyStore();
 const uiStore = useUIStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
 
@@ -252,7 +252,7 @@ async function saveSettings() {
 
 .user-area p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
 }
 
 .toggle-link {
@@ -269,5 +269,23 @@ async function saveSettings() {
 :deep(.base-input),
 :deep(.base-select) {
   margin-bottom: var(--spacing-sm);
+}
+
+/* By default (desktop), show the text */
+.desktop-only {
+  display: inline;
+}
+
+/* Hide text on mobile */
+@media screen and (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
+.login-or-signup-message {
+  font-size: 1rem;
+  margin-top: var(--spacing-md);
+  text-align: center;
 }
 </style>

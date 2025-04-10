@@ -2,103 +2,24 @@
   <div class="hangman-game">
     <h1>Jogo da Forca</h1>
     <!-- Componente de seletores -->
-    <SelectorsComponent
-      @specialty-change="startGame"
-      @difficulty-change="startGame"
-    />
+    <SelectorsComponent @specialty-change="startGame" @difficulty-change="startGame" />
 
     <div class="game-container" v-show="gameStarted">
       <!-- Figura da Forca -->
       <div class="hangman-figure">
         <svg height="250" width="200" id="hangman-svg">
           <!-- Base da forca -->
-          <line
-            x1="10"
-            y1="240"
-            x2="190"
-            y2="240"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            x1="60"
-            y1="240"
-            x2="60"
-            y2="20"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            x1="60"
-            y1="20"
-            x2="150"
-            y2="20"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            x1="150"
-            y1="20"
-            x2="150"
-            y2="50"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
+          <line x1="10" y1="240" x2="190" y2="240" stroke="#2c3e50" stroke-width="4" />
+          <line x1="60" y1="240" x2="60" y2="20" stroke="#2c3e50" stroke-width="4" />
+          <line x1="58" y1="20" x2="152" y2="20" stroke="#2c3e50" stroke-width="4" />
+          <line x1="150" y1="20" x2="150" y2="50" stroke="#2c3e50" stroke-width="4" />
           <!-- Partes do boneco, controladas por v-show -->
-          <circle
-            v-show="showHead"
-            cx="150"
-            cy="70"
-            r="20"
-            stroke="#2c3e50"
-            stroke-width="4"
-            fill="none"
-          />
-          <line
-            v-show="showBody"
-            x1="150"
-            y1="90"
-            x2="150"
-            y2="150"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            v-show="showLeftArm"
-            x1="150"
-            y1="120"
-            x2="120"
-            y2="100"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            v-show="showRightArm"
-            x1="150"
-            y1="120"
-            x2="180"
-            y2="100"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            v-show="showLeftLeg"
-            x1="150"
-            y1="150"
-            x2="120"
-            y2="180"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
-          <line
-            v-show="showRightLeg"
-            x1="150"
-            y1="150"
-            x2="180"
-            y2="180"
-            stroke="#2c3e50"
-            stroke-width="4"
-          />
+          <circle v-show="showHead" cx="150" cy="70" r="20" stroke="#2c3e50" stroke-width="4" fill="none" />
+          <line v-show="showBody" x1="150" y1="90" x2="150" y2="150" stroke="#2c3e50" stroke-width="4" />
+          <line v-show="showLeftArm" x1="150" y1="120" x2="120" y2="100" stroke="#2c3e50" stroke-width="4" />
+          <line v-show="showRightArm" x1="150" y1="120" x2="180" y2="100" stroke="#2c3e50" stroke-width="4" />
+          <line v-show="showLeftLeg" x1="150" y1="150" x2="120" y2="180" stroke="#2c3e50" stroke-width="4" />
+          <line v-show="showRightLeg" x1="150" y1="150" x2="180" y2="180" stroke="#2c3e50" stroke-width="4" />
         </svg>
         <!-- Mensagem (vitória ou derrota) -->
         <div class="message-container">
@@ -111,11 +32,7 @@
       <div>
         <!-- Exibição da palavra oculta -->
         <div class="word-container">
-          <span
-            v-for="(letter, index) in displayedWord"
-            :key="index"
-            class="letter"
-          >
+          <span v-for="(letter, index) in displayedWord" :key="index" class="letter">
             {{ letter }}
           </span>
         </div>
@@ -127,13 +44,8 @@
 
         <!-- Chute: input e botão -->
         <div class="guess-container">
-          <input
-            type="text"
-            v-model="guessLetter"
-            maxlength="1"
-            placeholder="Digite uma letra"
-            @keydown.enter.prevent="handleGuess"
-          />
+          <input type="text" v-model="guessLetter" maxlength="1" placeholder="Insira uma letra"
+            @keydown.enter.prevent="handleGuess" />
           <button @click="handleGuess">Chutar</button>
         </div>
 
@@ -149,8 +61,8 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
-import { useVocabularyStore } from "@/store/vocabularyStore";
-import { useSettingsStore } from "@/store/userSettings";
+import { useVocabularyStore } from "@/store/vocabulary";
+import { useSettingsStore } from "@/store/settings";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
 
 // Stores
@@ -236,7 +148,7 @@ function startGame() {
   // Inicializa a palavra oculta: revela espaços e hifens
   displayedWord.value = selectedWord.value.split("").map((char) => {
     if (char.match(/[\s\-]/)) return char;
-    return "_";
+    return "";
   });
 
   // Reinicia a figura da forca (oculta todas as partes)
@@ -353,9 +265,12 @@ onMounted(() => {
 }
 
 .clue-container {
-  margin-bottom: 1rem;
+  margin: 1rem;
   font-size: 1.125rem;
-  color: var(--secondary-color);
+  /* color: var(--secondary-color); */
+  border: 2px solid #333;
+  padding: 10px;
+  border-radius: 5px;
 }
 
 .info-container p {

@@ -184,8 +184,8 @@
 
 <script setup>
 import { ref, computed, reactive } from "vue";
-import { useVocabularyStore } from "@/store/vocabularyStore";
-import { useSettingsStore } from "@/store/userSettings";
+import { useVocabularyStore } from "@/store/vocabulary";
+import { useSettingsStore } from "@/store/settings";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
 import { saveWordsToLocalStorage } from "@/data/vocabularyData";
 

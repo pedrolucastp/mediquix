@@ -35,7 +35,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import SelectorsComponent from "../components/SelectorsComponent.vue";
-import { useWordStore } from "../store/wordStore";
+import { useVocabularyStore } from "../store/vocabulary";
 
 const currentQuestionIndex = ref(0);
 const timeLeft = ref(7);
@@ -49,7 +49,7 @@ const buttonColors = ref([]);
 
 let timer = null;
 
-const wordStore = useWordStore();
+const vocabularyStore = useVocabularyStore();
 
 const currentQuestion = computed(() => {
   return selectedQuestions.value[currentQuestionIndex.value];
@@ -61,7 +61,7 @@ function shuffleArray(array) {
 
 function generateOptions(correctAnswer) {
   const opts = [correctAnswer];
-  const incorrectOptions = wordStore.allWords
+  const incorrectOptions = vocabularyStore.filteredWords
     .filter((word) => word.word !== correctAnswer)
     .map((word) => word.word);
   shuffleArray(incorrectOptions);
@@ -139,13 +139,15 @@ function nextQuestion() {
 
 function startQuiz() {
   currentQuestionIndex.value = 0;
-  const quizWords = wordStore.getQuizWords(10);
-  if (quizWords.length === 0) {
+  // Use vocabularyStore's filtered words
+  const filteredWords = vocabularyStore.filteredWords;
+  if (filteredWords.length === 0) {
     alert("Nenhuma questão encontrada com os critérios selecionados.");
     quizVisible.value = false;
     return;
   }
-  selectedQuestions.value = quizWords;
+  // Get random selection of words for the quiz
+  selectedQuestions.value = shuffleArray([...filteredWords]).slice(0, 10);
   quizVisible.value = true;
   timeLeft.value = 7;
   showQuestion();

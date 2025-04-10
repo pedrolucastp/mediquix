@@ -1,5 +1,5 @@
 <template>
-  <button @click="toggleDarkMode" class="dark-mode-toggle" :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+  <button @click="toggleDarkMode" class="dark-mode-toggle" :style="{color: isDarkMode ? 'var(--dark-text-color)' : 'var(--text-color)'}" :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
     <font-awesome-icon :icon="isDarkMode ? ['fas', 'moon'] : ['fas', 'sun']" />
   </button>
 </template>

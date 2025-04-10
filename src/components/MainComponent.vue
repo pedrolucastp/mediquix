@@ -6,9 +6,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useDarkModeStore } from "../store/darkModeStore";
-const darkModeStore = useDarkModeStore();
-const isDarkMode = computed(() => darkModeStore.isDarkMode);
+import { useUIStore } from "@/store/ui";
+const uiStore = useUIStore();
+const isDarkMode = computed(() => uiStore.isDarkMode);
 
 </script>
 

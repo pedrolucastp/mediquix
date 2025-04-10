@@ -13,7 +13,7 @@ import {
   initAuthState
 } from '@/firebase';
 import { useSettingsStore } from '../settings';
-import { useUIStore } from '../ui';
+import { useUIStore } from '../ui/index';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);

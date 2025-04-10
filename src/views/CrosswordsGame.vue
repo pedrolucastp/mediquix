@@ -45,7 +45,7 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
-import { useVocabularyStore } from '@/store/vocabularyStore'
+import { useVocabularyStore } from '@/store/vocabulary'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
 
 // Constants
@@ -92,8 +92,8 @@ const lastClickedCell = ref({ row: null, col: null, wordIndex: 0 })
 
 // Computed
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${GRID_COLS}, 30px)`,
-  gridTemplateRows: `repeat(${GRID_ROWS}, 30px)`
+  gridTemplateColumns: `repeat(${GRID_COLS}, 40px)`,
+  gridTemplateRows: `repeat(${GRID_ROWS}, 40px)`
 }))
 
 const gridRows = computed(() => Array.from({ length: GRID_ROWS }, (_, i) => i))
@@ -842,14 +842,15 @@ onMounted(() => {
     width: 100%;
     position: relative;
     top: 0;
+    left: 0;
     order: 1;
     max-height: none;
   }
 }
 
 .cell {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   box-sizing: border-box;
   display: flex;
   align-items: center;

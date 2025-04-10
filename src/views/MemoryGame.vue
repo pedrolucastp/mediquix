@@ -35,7 +35,7 @@
 import { ref, onMounted } from "vue";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
 import GameCardFlip from "@/components/game/GameCardFlip.vue";
-import { useVocabularyStore } from "@/store/vocabularyStore";
+import { useVocabularyStore } from "@/store/vocabulary";
 
 const vocabularyStore = useVocabularyStore();
 

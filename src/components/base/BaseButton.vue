@@ -97,16 +97,16 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 
 .base-button.outline {
   background-color: transparent;
-  border-color: currentColor;
+  border-color: transparent;
 }
 
 .base-button.icon {
   padding: var(--spacing-sm);
 }
 
-.with-icon {
+/* .with-icon {
   margin-left: var(--spacing-xs);
-}
+} */
 
 /* Dark mode styles */
 .base-button.dark {

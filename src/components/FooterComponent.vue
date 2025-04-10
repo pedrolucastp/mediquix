@@ -10,10 +10,10 @@
 
 <script setup>
 import { computed } from "vue";
-import { useDarkModeStore } from "../store/darkModeStore";
+import { useUIStore } from "@/store/ui";
 
-const darkModeStore = useDarkModeStore();
-const isDarkMode = computed(() => darkModeStore.isDarkMode);
+const uiStore = useUIStore();
+const isDarkMode = computed(() => uiStore.isDarkMode);
 
 </script>
 

@@ -36,6 +36,9 @@
             </select>
           </div>
         </div>
+        <div class="word-counter">
+          Total de palavras: {{ filteredWordsCount }}
+        </div>
       </div>
     </transition>
   </div>
@@ -43,11 +46,13 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useSettingsStore } from '@/store/userSettings'
+import { useSettingsStore } from '@/store/settings'
 import { specialties } from '@/data/defaultSpecialties.js'
+import { useVocabularyStore } from '@/store/vocabulary'
 
 const emit = defineEmits(['specialty-change', 'difficulty-change'])
 const settingsStore = useSettingsStore()
+const vocabularyStore = useVocabularyStore()
 
 const selectedSpecialty = computed({
   get: () => settingsStore.selectedSpecialty,
@@ -57,6 +62,19 @@ const selectedSpecialty = computed({
 const selectedDifficulty = computed({
   get: () => settingsStore.selectedDifficulty,
   set: (value) => settingsStore.setDifficulty(value)
+})
+
+const filteredWordsCount = computed(() => {
+  let result = vocabularyStore.words;
+  if (selectedSpecialty.value !== 'all') {
+    const specialtyIndex = parseInt(selectedSpecialty.value);
+    result = result.filter(word => word.specialties.includes(specialtyIndex));
+  }
+  if (selectedDifficulty.value !== 'all') {
+    const difficultyLevel = parseInt(selectedDifficulty.value);
+    result = result.filter(word => word.difficulty === difficultyLevel);
+  }
+  return result.length;
 })
 
 watch(selectedSpecialty, (newVal) => {
@@ -152,6 +170,13 @@ select {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+.word-counter {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--secondary-color, #333);
 }
 
 @media only screen and (max-width: 768px) {

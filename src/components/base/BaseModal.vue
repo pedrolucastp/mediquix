@@ -111,9 +111,9 @@ function close() {
   font-weight: 600;
 }
 
-.modal-body {
-  margin-bottom: var(--spacing-md);
-}
+/* .modal-body {
+  margin-bottom: var(--spacing-sm);
+} */
 
 .modal-footer {
   display: flex;
