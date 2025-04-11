@@ -90,19 +90,19 @@
           <BaseInput
             v-model="settings.username"
             label="Username"
-            :disabled="!authStore.user"
+            :disabled="!authStore.user || isSaving"
           />
           <BaseSelect
             v-model="settings.default_difficulty"
             :options="difficultyOptions"
             label="Default Difficulty"
-            :disabled="!authStore.user"
+            :disabled="!authStore.user || isSaving"
           />
           <BaseSelect
             v-model="settings.default_speciality"
             :options="specialtyOptions"
             label="Default Specialty"
-            :disabled="!authStore.user"
+            :disabled="!authStore.user || isSaving"
           />
         </template>
       </template>
@@ -110,10 +110,11 @@
         <BaseButton
           variant="primary"
           icon="save"
-          :disabled="!authStore.user"
+          :disabled="!authStore.user || isSaving"
+          :loading="isSaving"
           @click="saveSettings"
         >
-          Save Settings
+          {{ isSaving ? 'Saving...' : 'Save Settings' }}
         </BaseButton>
       </template>
     </BaseModal>
@@ -146,20 +147,23 @@ const signupPassword = ref('');
 const showSettingsModal = ref(false);
 const settings = ref({
   username: '',
-  default_difficulty: 1,
-  default_speciality: 0,
+  default_difficulty: -1,
+  default_speciality: -1,
 });
+const isSaving = ref(false);
 
 // Convert specialties array to options format
-const specialtyOptions = computed(() => 
-  specialties.map((specialty, index) => ({
+const specialtyOptions = computed(() => [
+  { value: -1, label: 'Todas' },
+  ...specialties.map((specialty, index) => ({
     value: index,
     label: specialty
   }))
-);
+]);
 
 // Define difficulty options
 const difficultyOptions = [
+  { value: -1, label: 'Todas' },
   { value: 1, label: 'Fácil' },
   { value: 2, label: 'Média' },
   { value: 3, label: 'Difícil' }
@@ -230,10 +234,13 @@ function handleRegisterClick() {
 
 async function saveSettings() {
   try {
+    isSaving.value = true;
     await authStore.updateUserProfile(settings.value);
     closeSettingsModal();
   } catch (error) {
     uiStore.setError('settings', error.message);
+  } finally {
+    isSaving.value = false;
   }
 }
 </script>

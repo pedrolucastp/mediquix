@@ -12,13 +12,16 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
   const filteredWords = computed(() => {
     let result = words.value.filter(word => word.isActive);
     
-    if (settingsStore.selectedSpecialty !== 'all') {
-      const specialtyIndex = parseInt(settingsStore.selectedSpecialty);
+    const specialtyValue = settingsStore.selectedSpecialty;
+    const difficultyValue = settingsStore.selectedDifficulty;
+    
+    if (specialtyValue !== 'all') {
+      const specialtyIndex = parseInt(specialtyValue);
       result = result.filter(word => word.specialties.includes(specialtyIndex));
     }
     
-    if (settingsStore.selectedDifficulty !== 'all') {
-      const difficultyLevel = parseInt(settingsStore.selectedDifficulty);
+    if (difficultyValue !== 'all') {
+      const difficultyLevel = parseInt(difficultyValue);
       result = result.filter(word => word.difficulty === difficultyLevel);
     }
     

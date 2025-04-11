@@ -4,11 +4,16 @@ import { ref, watch, computed } from 'vue';
 const DEFAULT_SETTINGS = {
   selectedSpecialty: 'all',
   selectedDifficulty: 'all',
-  defaultSpecialty: 0,
-  defaultDifficulty: 1,
+  defaultSpecialty: -1,  // -1 represents "all"
+  defaultDifficulty: -1, // -1 represents "all"
   autoSaveEnabled: true,
   notificationsEnabled: true,
-  language: 'pt-BR'
+  language: 'pt-BR',
+  wordSearchGame: {
+    gridWidth: 24,
+    gridHeight: 12,
+    cellSize: 30
+  }
 };
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -48,11 +53,20 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function setDefaultPreferences(preferences) {
     if (preferences.defaultSpecialty !== undefined) {
-      settings.value.defaultSpecialty = preferences.defaultSpecialty;
+      settings.value.defaultSpecialty = preferences.defaultSpecialty === 'all' ? -1 : preferences.defaultSpecialty;
     }
     if (preferences.defaultDifficulty !== undefined) {
-      settings.value.defaultDifficulty = preferences.defaultDifficulty;
+      settings.value.defaultDifficulty = preferences.defaultDifficulty === 'all' ? -1 : preferences.defaultDifficulty;
     }
+  }
+
+  function setWordSearchGridSize(width, height, cellSize) {
+    settings.value.wordSearchGame = {
+      ...settings.value.wordSearchGame,
+      gridWidth: width,
+      gridHeight: height,
+      cellSize: cellSize
+    };
   }
 
   return {
@@ -63,6 +77,7 @@ export const useSettingsStore = defineStore('settings', () => {
     resetToDefaults,
     setSpecialty,
     setDifficulty,
-    setDefaultPreferences
+    setDefaultPreferences,
+    setWordSearchGridSize
   };
 });

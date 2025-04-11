@@ -1,21 +1,17 @@
 <template>
   <div class="selectors-container">
     <button class="collapse-toggle" @click="toggleCollapse">
-      <span class="toggle-text" v-if="isExpanded">
-        Especialidade &nbsp;
-        <svg class="toggle-icon" width="24" height="24" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M12 8l6 6c.3.3.3.7 0 1s-.7.3-1 0l-5-5-5 5c-.3.3-.7.3-1 0s-.3-.7 0-1l6-6z"/>
-        </svg>
-        &nbsp;Dificuldade
-      </span>
-      <span class="toggle-text" v-else>
-        Especialidade &nbsp;
-        <svg class="toggle-icon" width="24" height="24" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M12 16.5l-6-6c-.3-.3-.3-.7 0-1 .3-.3.7-.3 1 0l5 5 5-5c.3-.3.7-.3 1 0s.3.7 0 1l-6 6z"/>
-        </svg>
-        &nbsp;Dificuldade
-      </span>
+      Especialidade&nbsp;
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" class="chevron"
+        :class="{ rotated: isExpanded }">
+        <path fill="currentColor"
+          d="M12 16.5l-6-6c-.3-.3-.3-.7 0-1 .3-.3.7-.3 1 0l5 5 5-5c.3-.3.7-.3 1 0s.3.7 0 1l-6 6z" />
+      </svg>
+      &nbsp;Dificuldade
     </button>
+    <div class="word-counter">
+      Total de palavras: {{ filteredWordsCount }}
+    </div>
     <transition name="fade">
       <div class="collapsible-content" :class="{ expanded: isExpanded }">
         <div class="controls">
@@ -36,9 +32,7 @@
             </select>
           </div>
         </div>
-        <div class="word-counter">
-          Total de palavras: {{ filteredWordsCount }}
-        </div>
+
       </div>
     </transition>
   </div>
@@ -108,13 +102,16 @@ function toggleCollapse() {
   transition: transform 0.3s ease, color 0.3s ease;
   margin: 0 auto;
 }
+
 .collapse-toggle:hover {
   color: var(--primary-color, #2ecc71);
   transform: scale(1.1);
 }
+
 .toggle-icon {
   transition: transform 0.3s ease;
 }
+
 .collapse-toggle .toggle-text {
   display: flex;
   align-items: center;
@@ -126,6 +123,7 @@ function toggleCollapse() {
   visibility: hidden;
   height: 0;
 }
+
 .collapsible-content.expanded {
   visibility: visible;
   height: auto;
@@ -158,17 +156,22 @@ select {
   cursor: pointer;
   width: 100%;
 }
+
 #specialty-select {
   max-width: 200px;
 }
+
 #difficulty-select {
   width: 100px;
 }
 
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.3s ease;
 }
-.fade-enter-from, .fade-leave-to {
+
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 
@@ -185,7 +188,9 @@ select {
     gap: 10px;
     width: 100%;
   }
-  #specialty-select, #difficulty-select {
+
+  #specialty-select,
+  #difficulty-select {
     width: 100%;
   }
 }

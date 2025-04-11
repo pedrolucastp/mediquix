@@ -4,79 +4,54 @@
       <h1>Meu Vocabulário</h1>
       <SelectorsComponent />
       <div class="options-and-searchbar">
-        <button class="options-btn" @click="openOptionsModal">
-          <font-awesome-icon :icon="['fas', 'sliders-h']" />
+        <BaseButton 
+          variant="primary" 
+          icon="sliders-h" 
+          @click="openOptionsModal"
+          class="options-btn"
+        >
           Opções
-        </button>
+        </BaseButton>
         <div class="search-word">
-          <input
-            type="text"
-            class="search-term"
+          <BaseInput
             v-model="searchTerm"
             placeholder="Buscar palavra ou definição..."
+            icon="search"
+            @keyup.enter="searchWords"
           />
-          <button @click="searchWords" class="search-btn">
-            <font-awesome-icon :icon="['fas', 'search']" />
-          </button>
         </div>
       </div>
     </div>
 
-    <transition name="fade">
-      <div
-        class="modal-overlay"
-        v-if="showOptionsModal"
-        @click.self="closeOptionsModal"
-      >
-        <div class="modal-content options-modal">
-          <div class="options-buttons">
-            <button @click="openAddWordModal">
-              <font-awesome-icon :icon="['fas', 'plus']" />
-              Adicionar Palavra
-            </button>
-
-            <button @click="activateAll">
-              <font-awesome-icon :icon="['fas', 'check']" />
-              Ativar todos
-            </button>
-
-            <button @click="deactivateAll">
-              <font-awesome-icon :icon="['fas', 'times']" />
-              Desativar todos
-            </button>
-
-            <button @click="toggleOnlyActive">
-              <font-awesome-icon
-                :icon="['fas', onlyActive ? 'eye' : 'eye-slash']"
-              />
-              {{ onlyActive ? "Exibir todos" : "Exibir apenas ativos" }}
-            </button>
-
-            <button @click="toggleHighlightDuplicates">
-              <font-awesome-icon :icon="['fas', 'highlighter']" />
-              {{
-                highlightDuplicates ? "Remover Destaque" : "Destacar Duplicatas"
-              }}
-            </button>
-
-            <button @click="removeDuplicates">
-              <font-awesome-icon :icon="['fas', 'trash']" />
-              Remover Duplicatas
-            </button>
-
-            <!-- <button class="close-button" @click="closeOptionsModal">
-              &times;
-            </button> -->
-          </div>
-        </div>
+    <BaseModal
+      v-model="showOptionsModal"
+      title="Opções"
+    >
+      <div class="options-buttons">
+        <BaseButton variant="primary" icon="plus" @click="openAddWordModal" class="option-btn">
+          Adicionar Palavra
+        </BaseButton>
+        <BaseButton variant="primary" icon="check" @click="activateAll" class="option-btn">
+          Ativar todos
+        </BaseButton>
+        <BaseButton variant="primary" icon="times" @click="deactivateAll" class="option-btn">
+          Desativar todos
+        </BaseButton>
+        <BaseButton variant="primary" :icon="onlyActive ? 'eye' : 'eye-slash'" @click="toggleOnlyActive" class="option-btn">
+          {{ onlyActive ? "Exibir todos" : "Exibir apenas ativos" }}
+        </BaseButton>
+        <BaseButton variant="primary" icon="highlighter" @click="toggleHighlightDuplicates" class="option-btn">
+          {{ highlightDuplicates ? "Remover Destaque" : "Destacar Duplicatas" }}
+        </BaseButton>
+        <BaseButton variant="accent" icon="trash" @click="removeDuplicates" class="option-btn">
+          Remover Duplicatas
+        </BaseButton>
       </div>
-    </transition>
+    </BaseModal>
 
-    <div class="counter">
-      <p>
-        Total de termos: <span>{{ displayedWords.length }}</span>
-      </p>
-    </div>
+    <!-- <div class="counter">
+      <p>Total de termos: <span>{{ displayedWords.length }}</span></p>
+    </div> -->
 
     <div class="vocabulary-list">
       <div
@@ -85,97 +60,171 @@
         class="term-item"
         :class="{
           duplicate: highlightDuplicates && duplicateMap[wordKey(word)] > 1,
+          expanded: isExpanded(index)
         }"
+        @click="!editingIndices.includes(index) && toggleExpansion(index)"
       >
-        <div class="card-header" @click="toggleExpansion(index)">
+        <div class="card-header">
           <h2>{{ word.word }}</h2>
+          <div class="card-badges">
+            <span class="badge difficulty-badge" :class="'difficulty-' + word.difficulty">
+              {{ formatDifficulty(word.difficulty) }}
+            </span>
+            <span class="badge active-badge" :class="{ 'is-active': word.isActive }">
+              {{ word.isActive ? 'Ativo' : 'Inativo' }}
+            </span>
+          </div>
         </div>
+
         <div class="card-details" v-if="isExpanded(index)">
           <p class="clue">{{ word.clue }}</p>
-          <p class="specialties">
-            {{ formatSpecialties(word.specialties) }}
-          </p>
-          <p class="difficulty">
-            {{ formatDifficulty(word.difficulty) }}
-          </p>
-          <div class="icons-container">
-            <span class="icon edit-icon" @click.stop="toggleEditMode(index)">
-              <font-awesome-icon :icon="['fas', 'edit']" />
+          <div class="specialties-tags">
+            <span v-for="specIndex in word.specialties" 
+                  :key="specIndex" 
+                  class="specialty-tag">
+              {{ vocabularyStore.specialties[specIndex] }}
             </span>
-            <span class="icon delete-icon" @click.stop="deleteWord(index)">
-              <font-awesome-icon :icon="['fas', 'trash']" />
-            </span>
-            <input
-              type="checkbox"
-              v-model="word.isActive"
-              @change.stop="toggleActive(word)"
-              title="Ativar/Desativar"
+          </div>
+          <div class="card-actions">
+            <BaseButton 
+              variant="outline" 
+              icon="edit" 
+              @click.stop="toggleEditMode(index)"
+              size="sm"
+            />
+            <BaseButton 
+              variant="outline" 
+              icon="trash" 
+              @click.stop="deleteWord(index)"
+              size="sm"
+            />
+            <BaseButton 
+              variant="outline" 
+              :icon="word.isActive ? 'eye' : 'eye-slash'" 
+              @click.stop="toggleActive(word)"
+              size="sm"
             />
           </div>
         </div>
-        <div class="edit-container" v-if="editingIndices.includes(index)">
-          <input
-            type="text"
+
+        <div class="edit-form" v-if="editingIndices.includes(index)">
+          <BaseInput
             v-model="editData[index].word"
-            placeholder="Palavra"
+            label="Palavra"
+            required
           />
-          <textarea
+          <BaseInput
             v-model="editData[index].clue"
-            placeholder="Dica"
-          ></textarea>
+            label="Dica"
+            type="textarea"
+            required
+          />
           <div class="specialties-select">
-            <label v-for="(spec, i) in vocabularyStore.specialties" :key="i">
-              <input
-                type="checkbox"
-                :value="i"
-                v-model="editData[index].specialties"
-              />
-              {{ spec }}
-            </label>
+            <label>Especialidades:</label>
+            <div class="specialties-grid">
+              <label v-for="(spec, i) in vocabularyStore.specialties" 
+                     :key="i"
+                     class="specialty-checkbox"
+                     :class="{ selected: editData[index].specialties.includes(i) }">
+                <input
+                  type="checkbox"
+                  :value="i"
+                  v-model="editData[index].specialties"
+                />
+                <span class="specialty-label">{{ spec }}</span>
+              </label>
+            </div>
           </div>
-          <select v-model.number="editData[index].difficulty">
-            <option disabled value="">Selecione</option>
-            <option value="1">Fácil</option>
-            <option value="2">Média</option>
-            <option value="3">Difícil</option>
-          </select>
-          <button @click="saveEdit(index)">Salvar</button>
-          <button @click="cancelEdit(index)">Cancelar</button>
+          <BaseSelect
+            v-model="editData[index].difficulty"
+            :options="difficultyOptions"
+            label="Dificuldade"
+            required
+          />
+          <div class="edit-actions">
+            <BaseButton 
+              variant="primary" 
+              icon="save" 
+              @click="saveEdit(index)"
+            >
+              Salvar
+            </BaseButton>
+            <BaseButton 
+              variant="outline" 
+              icon="times" 
+              @click="cancelEdit(index)"
+            >
+              Cancelar
+            </BaseButton>
+          </div>
         </div>
       </div>
     </div>
 
+    <BaseModal
+      v-model="showAddModal"
+      title="Adicionar Nova Palavra"
+    >
+      <form @submit.prevent="addNewWord" class="add-word-form">
+        <BaseInput
+          v-model="newWord.word"
+          label="Palavra"
+          required
+        />
+        <BaseInput
+          v-model="newWord.clue"
+          label="Dica"
+          type="textarea"
+          required
+        />
+        <div class="specialties-select">
+          <label>Especialidades:</label>
+          <div class="specialties-grid">
+            <label v-for="(spec, i) in vocabularyStore.specialties" 
+                   :key="i"
+                   class="specialty-checkbox"
+                   :class="{ selected: newWord.specialties.includes(i) }">
+              <input
+                type="checkbox"
+                :value="i"
+                v-model="newWord.specialties"
+              />
+              <span class="specialty-label">{{ spec }}</span>
+            </label>
+          </div>
+        </div>
+        <BaseSelect
+          v-model="newWord.difficulty"
+          :options="difficultyOptions"
+          label="Dificuldade"
+          required
+        />
+        <div class="modal-actions">
+          <BaseButton 
+            type="submit" 
+            variant="primary" 
+            icon="plus"
+          >
+            Adicionar
+          </BaseButton>
+          <BaseButton 
+            type="button" 
+            variant="outline" 
+            icon="times" 
+            @click="closeAddWordModal"
+          >
+            Cancelar
+          </BaseButton>
+        </div>
+      </form>
+    </BaseModal>
+
+    <!-- Loading Overlay -->
     <transition name="fade">
-      <div class="modal" v-if="showAddModal" @click.self="closeAddWordModal">
-        <div class="modal-content">
-          <span class="close-button" @click="closeAddWordModal">&times;</span>
-          <h2>Adicionar Nova Palavra</h2>
-          <form @submit.prevent="addNewWord">
-            <label>Palavra:</label>
-            <input type="text" v-model="newWord.word" required />
-            <label>Dica:</label>
-            <textarea v-model="newWord.clue" required></textarea>
-            <label>Especialidades:</label>
-            <div class="specialties-select">
-              <label v-for="(spec, i) in vocabularyStore.specialties" :key="i">
-                <input
-                  type="checkbox"
-                  :value="i"
-                  v-model="newWord.specialties"
-                />
-                {{ spec }}
-              </label>
-            </div>
-            <label>Dificuldade:</label>
-            <select v-model.number="newWord.difficulty" required>
-              <option disabled value="">Selecione</option>
-              <option value="1">Fácil</option>
-              <option value="2">Média</option>
-              <option value="3">Difícil</option>
-            </select>
-            <button type="submit">Adicionar</button>
-            <button type="button" @click="closeAddWordModal">Cancelar</button>
-          </form>
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-content">
+          <font-awesome-icon icon="circle-notch" size="2x" class="loading-spinner" />
+          <p>{{ getLoadingMessage }}</p>
         </div>
       </div>
     </transition>
@@ -188,6 +237,10 @@ import { useVocabularyStore } from "@/store/vocabulary";
 import { useSettingsStore } from "@/store/settings";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
 import { saveWordsToLocalStorage } from "@/data/vocabularyData";
+import BaseButton from '@/components/base/BaseButton.vue';
+import BaseInput from '@/components/base/BaseInput.vue';
+import BaseSelect from '@/components/base/BaseSelect.vue';
+import BaseModal from '@/components/base/BaseModal.vue';
 
 const vocabularyStore = useVocabularyStore();
 const settingsStore = useSettingsStore();
@@ -202,6 +255,9 @@ const expandedIndices = ref([]);
 
 const editingIndices = ref([]);
 const editData = reactive({});
+
+const isLoading = ref(false);
+const actionInProgress = ref('');
 
 function normalize(str) {
   return str
@@ -320,7 +376,7 @@ const newWord = reactive({
   difficulty: null,
 });
 
-function addNewWord() {
+async function addNewWord() {
   if (
     !newWord.word.trim() ||
     !newWord.clue.trim() ||
@@ -330,65 +386,107 @@ function addNewWord() {
     alert("Preencha todos os campos corretamente.");
     return;
   }
-  const exists = vocabularyStore.words.some(
-    (item) => normalize(item.word) === newWord.word.trim().toLowerCase()
-  );
-  if (
-    exists &&
-    !confirm("A palavra já existe. Deseja adicionar outra instância?")
-  ) {
-    return;
+
+  try {
+    isLoading.value = true;
+    actionInProgress.value = 'adding';
+    
+    const exists = vocabularyStore.words.some(
+      (item) => normalize(item.word) === newWord.word.trim().toLowerCase()
+    );
+    if (
+      exists &&
+      !confirm("A palavra já existe. Deseja adicionar outra instância?")
+    ) {
+      return;
+    }
+    const newWordObj = {
+      word: newWord.word.trim(),
+      clue: newWord.clue.trim(),
+      specialties: [...newWord.specialties],
+      difficulty: newWord.difficulty,
+      isActive: true,
+    };
+    vocabularyStore.words.push(newWordObj);
+    await saveWordsToLocalStorage(vocabularyStore.words);
+    closeAddWordModal();
+    newWord.word = "";
+    newWord.clue = "";
+    newWord.specialties = [];
+    newWord.difficulty = null;
+  } catch (error) {
+    console.error('Error adding word:', error);
+    alert('Ocorreu um erro ao adicionar a palavra. Tente novamente.');
+  } finally {
+    isLoading.value = false;
+    actionInProgress.value = '';
   }
-  const newWordObj = {
-    word: newWord.word.trim(),
-    clue: newWord.clue.trim(),
-    specialties: [...newWord.specialties],
-    difficulty: newWord.difficulty,
-    isActive: true,
-  };
-  vocabularyStore.words.push(newWordObj);
-  saveWordsToLocalStorage(vocabularyStore.words);
-  closeAddWordModal();
-  newWord.word = "";
-  newWord.clue = "";
-  newWord.specialties = [];
-  newWord.difficulty = null;
 }
 
 function toggleEditMode(index) {
   if (editingIndices.value.includes(index)) {
-    const pos = editingIndices.value.indexOf(index);
-    if (pos !== -1) editingIndices.value.splice(pos, 1);
+    cancelEdit(index);
   } else {
+    // Ensure the item is expanded when entering edit mode
+    if (!isExpanded(index)) {
+      toggleExpansion(index);
+    }
     editingIndices.value.push(index);
     editData[index] = JSON.parse(JSON.stringify(displayedWords.value[index]));
   }
 }
 
-function saveEdit(index) {
+async function saveEdit(index) {
   const edited = editData[index];
-  if (!edited.word.trim()) {
-    alert("A palavra não pode estar vazia.");
+  if (!edited.word.trim() || !edited.clue.trim() || !edited.difficulty || edited.specialties.length === 0) {
+    alert("Preencha todos os campos corretamente.");
     return;
   }
-  const idx = vocabularyStore.words.findIndex(
-    (w) => w.word === displayedWords.value[index].word
-  );
-  if (idx !== -1) {
-    vocabularyStore.words[idx] = { ...edited };
-    saveWordsToLocalStorage(vocabularyStore.words);
+
+  try {
+    isLoading.value = true;
+    actionInProgress.value = 'editing';
+
+    const idx = vocabularyStore.words.findIndex(
+      (w) => w.word === displayedWords.value[index].word
+    );
+    if (idx !== -1) {
+      vocabularyStore.words[idx] = { ...edited };
+      await saveWordsToLocalStorage(vocabularyStore.words);
+    }
+    // Clean up edit mode
+    cancelEdit(index);
+  } catch (error) {
+    console.error('Error saving edit:', error);
+    alert('Ocorreu um erro ao salvar as alterações. Tente novamente.');
+  } finally {
+    isLoading.value = false;
+    actionInProgress.value = '';
   }
-  const pos = editingIndices.value.indexOf(index);
-  if (pos !== -1) editingIndices.value.splice(pos, 1);
 }
 
 function cancelEdit(index) {
   const pos = editingIndices.value.indexOf(index);
-  if (pos !== -1) editingIndices.value.splice(pos, 1);
+  if (pos !== -1) {
+    editingIndices.value.splice(pos, 1);
+    delete editData[index]; // Clean up edit data
+  }
 }
 
-function toggleActive(word) {
-  saveWordsToLocalStorage(vocabularyStore.words);
+async function toggleActive(word) {
+  try {
+    isLoading.value = true;
+    actionInProgress.value = 'toggling';
+    word.isActive = !word.isActive;
+    await saveWordsToLocalStorage(vocabularyStore.words);
+  } catch (error) {
+    console.error('Error toggling active state:', error);
+    word.isActive = !word.isActive; // Revert on error
+    alert('Ocorreu um erro ao alterar o estado. Tente novamente.');
+  } finally {
+    isLoading.value = false;
+    actionInProgress.value = '';
+  }
 }
 
 function searchWords() {
@@ -407,6 +505,25 @@ function formatDifficulty(diff) {
 function wordKey(word) {
   return normalize(word.word);
 }
+
+const difficultyOptions = [
+  { value: 1, label: 'Fácil' },
+  { value: 2, label: 'Média' },
+  { value: 3, label: 'Difícil' }
+];
+
+const getLoadingMessage = computed(() => {
+  switch(actionInProgress.value) {
+    case 'adding':
+      return 'Adicionando palavra...';
+    case 'editing':
+      return 'Salvando alterações...';
+    case 'toggling':
+      return 'Atualizando estado...';
+    default:
+      return 'Carregando...';
+  }
+});
 </script>
 
 <style scoped>
@@ -414,184 +531,340 @@ function wordKey(word) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
 }
 
 .vocab-header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: var(--spacing-md);
 }
 
 .options-and-searchbar {
-  justify-content: space-around;
   display: flex;
+  gap: var(--spacing-md);
   width: 100%;
-}
-
-.options-btn {
-  padding: 0 10px;
-}
-.search-btn {
-  padding: 0 10px;
-  height: 100%;
-}
-
-.options-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
-}
-
-.options-buttons button {
-  padding: 0.5rem 1rem;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-}
-
-.options-buttons button:hover {
-  background-color: #2980b9;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 5px;
-  width: 90%;
-  max-width: 500px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .search-word {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
+  flex: 1;
 }
 
-.search-term {
-  min-width: 200px;
-  padding: 0.5rem 10px;
+.options-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+  width: 100%;
 }
 
-.counter {
-  text-align: center;
-  margin: 1rem;
+.option-btn {
+  width: 100%;
 }
 
 .vocabulary-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-md);
   overflow-y: auto;
+  position: relative;
 }
 
 .term-item {
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  cursor: pointer;
-  background-color: var(--select-background, #fff);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-color);
+  transition: all 0.3s ease, height 0.3s ease, padding 0.3s ease;
+  transform-origin: top;
+  animation: slide-in 0.3s ease-out;
 }
 
-.clue {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 18px;
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.specialties {
-  font-weight: bold;
+.term-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
-.difficulty {
-  font-size: 14px;
+.term-item.expanded {
+  background-color: var(--background-color);
+  transform: scale(1.02);
 }
 
-.duplicate {
-  border: 2px solid var(--accent-color);
-  background-color: rgba(255, 0, 0, 0.1);
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.card-header h2 {
-  margin: 0;
+.card-badges {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.badge:hover {
+  transform: translateY(-2px);
+}
+
+.difficulty-badge {
+  background-color: var(--surface-color);
+}
+
+.difficulty-1 {
+  color: #2ecc71;
+}
+
+.difficulty-2 {
+  color: #f1c40f;
+}
+
+.difficulty-3 {
+  color: #e74c3c;
+}
+
+.active-badge {
+  background-color: var(--surface-color);
+}
+
+.active-badge.is-active {
+  color: #2ecc71;
 }
 
 .card-details {
+  margin-top: var(--spacing-md);
   display: flex;
-  margin-top: 0.5rem;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: 10px;
-  text-align: start;
+  gap: var(--spacing-md);
+  animation: fade-in 0.3s ease-out;
 }
 
-.icons-container {
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.clue {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.specialties-tags {
   display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
-.modal {
+.specialty-tag {
+  padding: 4px 8px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  animation: tag-pop 0.2s ease-out;
+}
+
+@keyframes tag-pop {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.card-actions button {
+  transition: all 0.2s ease;
+}
+
+.card-actions button:hover {
+  transform: scale(1.1);
+}
+
+.edit-form {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  animation: fade-in 0.3s ease-out;
+}
+
+.specialties-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.specialties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.specialty-checkbox {
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+}
+
+.specialty-checkbox:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--primary-color);
+}
+
+.specialty-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.specialty-label {
+  flex: 1;
+  text-align: center;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.specialty-checkbox.selected {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+/* Dark mode support */
+:deep(.dark) .specialty-checkbox {
+  border-color: var(--dark-border-color);
+}
+
+:deep(.dark) .specialty-checkbox:hover {
+  border-color: var(--dark-primary-color);
+}
+
+:deep(.dark) .specialty-checkbox.selected {
+  background-color: var(--dark-primary-color);
+  border-color: var(--dark-primary-color);
+}
+
+.duplicate {
+  border-color: var(--accent-color);
+  background-color: rgba(255, 99, 71, 0.1);
+}
+
+/* Loading overlay styles */
+.loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fade-in 0.2s ease-out;
 }
 
-.modal-content {
-  background-color: white;
-  padding: 1rem;
-  border-radius: 5px;
-  width: 90%;
-  max-width: 500px;
+.loading-content {
+  background: var(--surface-color);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
 }
 
-.close-button {
-  float: right;
-  cursor: pointer;
+.loading-spinner {
+  animation: spin 1s linear infinite;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@media only screen and (max-width: 768px) {
-  .options-buttons {
-    flex-direction: column;
-    align-items: center;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
   }
-  .search-term {
-    width: 100%;
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dark mode support */
+:deep(.dark) .term-item {
+  background-color: var(--dark-surface-color);
+  border-color: var(--dark-border-color);
+}
+
+:deep(.dark) .term-item.expanded {
+  background-color: var(--dark-background-color);
+}
+
+:deep(.dark) .clue {
+  color: var(--dark-text-secondary);
+}
+
+:deep(.dark) .badge {
+  background-color: var(--dark-surface-color);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .options-and-searchbar {
+    flex-direction: column;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .specialties-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
 </style>

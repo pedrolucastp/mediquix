@@ -66,8 +66,8 @@ export const useAuthStore = defineStore('auth', () => {
         username: email.split('@')[0],
         email: email,
         custom_vocabulary: [],
-        default_difficulty: settingsStore.settings.defaultDifficulty,
-        default_speciality: settingsStore.settings.defaultSpecialty,
+        default_difficulty: Number(settingsStore.settings.defaultDifficulty),
+        default_speciality: Number(settingsStore.settings.defaultSpecialty)
       };
 
       await setDoc(doc(db, "users", user.value.uid), defaultSettings);
@@ -110,13 +110,19 @@ export const useAuthStore = defineStore('auth', () => {
         const defaultSettings = {
           username: user.value.email.split('@')[0],
           email: user.value.email,
-          default_difficulty: settingsStore.settings.defaultDifficulty,
-          default_speciality: settingsStore.settings.defaultSpecialty,
+          default_difficulty: Number(settingsStore.settings.defaultDifficulty),
+          default_speciality: Number(settingsStore.settings.defaultSpecialty),
           custom_vocabulary: [],
         };
 
-        // Ensure all required fields exist
-        const mergedSettings = { ...defaultSettings, ...settingsData };
+        // Ensure all required fields exist and proper types
+        const mergedSettings = {
+          ...defaultSettings,
+          ...settingsData,
+          default_difficulty: Number(settingsData.default_difficulty ?? defaultSettings.default_difficulty),
+          default_speciality: Number(settingsData.default_speciality ?? defaultSettings.default_speciality),
+          custom_vocabulary: Array.isArray(settingsData.custom_vocabulary) ? settingsData.custom_vocabulary : []
+        };
         
         if (JSON.stringify(mergedSettings) !== JSON.stringify(settingsData)) {
           await updateDoc(userDocRef, mergedSettings);
@@ -140,12 +146,23 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       uiStore.setLoading('userSettings', true);
       const userDocRef = doc(db, "users", user.value.uid);
-      await updateDoc(userDocRef, newSettings);
-      user.value.settings = { ...user.value.settings, ...newSettings };
+      
+      // Ensure we have all required fields and proper types
+      const currentSettings = user.value.settings || {};
+      const updatedSettings = {
+        username: newSettings.username || currentSettings.username,
+        email: currentSettings.email, // Don't allow email updates through this method
+        custom_vocabulary: currentSettings.custom_vocabulary || [],
+        default_difficulty: Number(newSettings.default_difficulty),
+        default_speciality: Number(newSettings.default_speciality)
+      };
+
+      await updateDoc(userDocRef, updatedSettings);
+      user.value.settings = { ...currentSettings, ...updatedSettings };
       
       settingsStore.setDefaultPreferences({
-        defaultSpecialty: newSettings.default_speciality,
-        defaultDifficulty: newSettings.default_difficulty
+        defaultSpecialty: updatedSettings.default_speciality,
+        defaultDifficulty: updatedSettings.default_difficulty
       });
     } catch (error) {
       uiStore.setError('userSettings', error.message);

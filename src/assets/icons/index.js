@@ -24,7 +24,13 @@ import {
   faSun,
   faFeather,
   faBolt,
-  faQuestion
+  faQuestion,
+  faEnvelope,
+  faLock,
+  faChevronDown,
+  faCircleNotch,
+  faPenToSquare,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -53,5 +59,11 @@ library.add(
   faSun,
   faFeather,
   faBolt,
-  faQuestion
+  faQuestion,
+  faEnvelope,
+  faLock,
+  faChevronDown,
+  faCircleNotch,
+  faPenToSquare,
+  faChevronRight
 )

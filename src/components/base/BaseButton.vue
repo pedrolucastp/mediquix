@@ -3,15 +3,15 @@
     :class="[
       'base-button',
       variant,
-      { icon: !!icon, disabled: disabled },
+      { icon: !!icon, disabled: disabled, loading: loading },
       { dark: isDarkMode }
     ]"
-    :disabled="disabled"
+    :disabled="disabled || loading"
     :type="type"
     @click="$emit('click', $event)"
   >
-    <font-awesome-icon v-if="icon" :icon="['fas', icon]" :size="iconSize" />
-    <span v-if="$slots.default" :class="{ 'with-icon': icon }">
+    <font-awesome-icon v-if="icon" :icon="['fas', icon]" :size="iconSize" :class="{ 'fa-icon': loading }" />
+    <span v-if="$slots.default" :class="{ 'with-icon': icon && !loading }">
       <slot />
     </span>
   </button>
@@ -36,6 +36,10 @@ const props = defineProps({
     default: '1x'
   },
   disabled: {
+    type: Boolean,
+    default: false
+  },
+  loading: {
     type: Boolean,
     default: false
   },
@@ -104,9 +108,27 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   padding: var(--spacing-sm);
 }
 
-/* .with-icon {
-  margin-left: var(--spacing-xs);
-} */
+.base-button.loading {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.base-button.loading .with-icon {
+  opacity: 0;
+}
+
+.base-button.loading .fa-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* Dark mode styles */
 .base-button.dark {
