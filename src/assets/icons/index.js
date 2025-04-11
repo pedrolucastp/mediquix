@@ -31,6 +31,9 @@ import {
   faCircleNotch,
   faPenToSquare,
   faChevronRight,
+  faEllipsisH,
+  faCheckSquare,
+  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -65,5 +68,8 @@ library.add(
   faChevronDown,
   faCircleNotch,
   faPenToSquare,
-  faChevronRight
+  faChevronRight,
+  faEllipsisH,
+  faCheckSquare,
+  faUser,
 )

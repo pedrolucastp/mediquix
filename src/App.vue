@@ -31,14 +31,17 @@ import FooterComponent from "./components/FooterComponent.vue";
   --border-color: #E2E8F0;
   
   /* Dark Theme Colors */
-  --dark-primary-color: #60A5FA;
+  --dark-primary-color: #63B3ED;
   --dark-secondary-color: #4FD1C5;
-  --dark-accent-color: #FF8383;
-  --dark-background-color: #1A202C;
+  --dark-accent-color: #FC8181;
+  --dark-background-color: #171923;
   --dark-surface-color: #2D3748;
   --dark-text-color: #F7FAFC;
-  --dark-text-secondary: #CBD5E0;
+  --dark-text-secondary: #A0AEC0;
   --dark-border-color: #4A5568;
+  --dark-hover-color: rgba(255, 255, 255, 0.1);
+  --dark-focus-color: rgba(99, 179, 237, 0.2);
+  --dark-highlight-color: rgba(236, 201, 75, 0.2);
   
   /* Functional Colors */
   --success-color: #48BB78;
@@ -74,8 +77,21 @@ body {
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: all 0.3s ease;
 }
+
+/* By default (desktop), show the text */
+.desktop-only {
+  display: inline;
+}
+
+/* Hide text on mobile */
+@media screen and (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
 
 #app.dark {
   background-color: var(--dark-background-color);
@@ -89,13 +105,14 @@ button {
   border: 1px solid var(--border-color);
   background-color: var(--surface-color);
   color: var(--text-color);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 button:hover {
   background-color: var(--primary-color);
   color: white;
   border-color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
 input, select {
@@ -105,7 +122,7 @@ input, select {
   background-color: var(--surface-color);
   color: var(--text-color);
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 
@@ -123,6 +140,7 @@ input:focus, select:focus {
 .dark button:hover {
   background-color: var(--dark-primary-color);
   border-color: var(--dark-primary-color);
+  color: white;
 }
 
 .dark input, .dark select {
@@ -130,4 +148,30 @@ input:focus, select:focus {
   color: var(--dark-text-color);
   border-color: var(--dark-border-color);
 }
+
+.dark input:focus, .dark select:focus {
+  border-color: var(--dark-primary-color);
+  box-shadow: 0 0 0 2px var(--dark-focus-color);
+}
+
+/* Scrollbar styles for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--dark-background-color);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--dark-border-color);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-text-secondary);
+}
+
+
 </style>

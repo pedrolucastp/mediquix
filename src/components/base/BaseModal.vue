@@ -76,8 +76,22 @@ function close() {
   box-shadow: var(--shadow-md);
 }
 
+/* Dark mode styles */
 .modal-content.dark {
   background-color: var(--dark-surface-color);
+  color: var(--dark-text-color);
+  border: 1px solid var(--dark-border-color);
+}
+
+.modal-content.dark .close-button {
+  color: var(--dark-text-secondary);
+}
+
+.modal-content.dark .close-button:hover {
+  color: var(--dark-accent-color);
+}
+
+.modal-content.dark .modal-header h3 {
   color: var(--dark-text-color);
 }
 

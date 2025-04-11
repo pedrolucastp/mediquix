@@ -165,8 +165,19 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   border-color: var(--dark-border-color);
 }
 
+.dark .base-select:hover:not(:disabled) {
+  border-color: var(--dark-text-secondary);
+}
+
 .dark .base-select:focus {
   border-color: var(--dark-primary-color);
+  box-shadow: 0 0 0 2px var(--dark-focus-color);
+}
+
+.dark .base-select:disabled {
+  background-color: var(--dark-background-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-secondary);
 }
 
 .dark .select-icon {
@@ -177,9 +188,14 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   color: var(--dark-text-secondary);
 }
 
-/* Option styles */
+.dark .error-text {
+  color: var(--error-color);
+}
+
+/* Option styles - these will affect the dropdown */
 .dark .base-select option {
   background-color: var(--dark-surface-color);
   color: var(--dark-text-color);
+  padding: var(--spacing-sm);
 }
 </style>

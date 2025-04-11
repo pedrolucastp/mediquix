@@ -6,7 +6,7 @@
         <!-- add the logo (favicon.svg) here -->
         <img src="@/assets/logo.svg" alt="Logo" width="30" height="30" />
 
-        <h1>MediQuix</h1>
+        <h1 class="desktop-only">MediQuix</h1>
       </router-link>
     </div>
     <DarkModeToggle />
@@ -31,7 +31,11 @@ header {
   padding: var(--spacing-md);
   background-color: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.3s, color 0.3s;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s ease;
 }
 
 .header-left {
@@ -49,6 +53,11 @@ header {
   flex-direction: row;
   align-items: center;
   gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.02);
 }
 
 .logo h1 {
@@ -61,6 +70,7 @@ header {
 header.dark {
   background-color: var(--dark-surface-color);
   border-color: var(--dark-border-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 header.dark .logo {

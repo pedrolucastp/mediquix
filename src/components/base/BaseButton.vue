@@ -138,11 +138,90 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 }
 
 .base-button.dark:hover:not(:disabled) {
+  background-color: rgba(99, 179, 237, 0.2);
+  border-color: var(--dark-primary-color);
+  transform: translateY(-1px);
+}
+
+.base-button.dark.primary {
   background-color: var(--dark-primary-color);
   border-color: var(--dark-primary-color);
+  color: var(--dark-text-color);
+}
+
+.base-button.dark.primary:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.base-button.dark.secondary {
+  background-color: var(--dark-secondary-color);
+  border-color: var(--dark-secondary-color);
+  color: var(--dark-text-color);
+}
+
+.base-button.dark.accent {
+  background-color: var(--dark-accent-color);
+  border-color: var(--dark-accent-color);
+  color: var(--dark-text-color);
+}
+
+.base-button.dark.outline {
+  background-color: transparent;
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-color);
 }
 
 .base-button.dark.outline:hover:not(:disabled) {
+  background-color: var(--dark-hover-color);
+  border-color: var(--dark-primary-color);
+}
+
+/* Toggle button styles */
+.base-button.outline.toggle {
+  min-width: 120px;
+  position: relative;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  transition: all 0.3s ease;
+}
+
+.base-button.outline.toggle.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.base-button.outline.toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background-color: var(--surface-color);
+}
+
+.base-button.outline.toggle.active:hover:not(:disabled) {
+  background-color: var(--primary-color);
+  opacity: 0.9;
+}
+
+/* Dark mode support */
+.base-button.dark.outline.toggle {
   background-color: var(--dark-surface-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-color);
+}
+
+.base-button.dark.outline.toggle:hover:not(:disabled) {
+  background-color: var(--dark-hover-color);
+}
+
+.base-button.dark.outline.toggle.active {
+  background-color: var(--dark-primary-color);
+  border-color: var(--dark-primary-color);
+  color: var(--dark-text-color);
+}
+
+.base-button.dark.outline.toggle.active:hover:not(:disabled) {
+  opacity: 0.9;
+  background-color: var(--dark-primary-color);
 }
 </style>

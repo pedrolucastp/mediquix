@@ -9,11 +9,10 @@
       </svg>
       &nbsp;Dificuldade
     </button>
-    <div class="word-counter">
-      Total de palavras: {{ filteredWordsCount }}
-    </div>
+
     <transition name="fade">
       <div class="collapsible-content" :class="{ expanded: isExpanded }">
+        
         <div class="controls">
           <div class="controls-option">
             <select id="specialty-select" v-model="selectedSpecialty">
@@ -31,6 +30,10 @@
               <option value="3">Difícil</option>
             </select>
           </div>
+        </div>
+
+        <div class="word-counter">
+          Total de palavras: {{ filteredWordsCount }}
         </div>
 
       </div>

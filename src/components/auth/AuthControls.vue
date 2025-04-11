@@ -12,8 +12,8 @@
         </BaseButton>
       </template>
       <div v-else class="user-area">
-        <p>Olá, {{ authStore.username }}</p>
-        <BaseButton variant="outline" icon="cog" @click="openSettingsModal" />
+        <p class="desktop-only">Olá, {{ authStore.username }}</p>
+        <BaseButton variant="outline" icon="user" @click="openSettingsModal" />
         <BaseButton variant="outline" icon="sign-out-alt" @click="handleLogout" />
       </div>
     </template>
@@ -276,18 +276,6 @@ async function saveSettings() {
 :deep(.base-input),
 :deep(.base-select) {
   margin-bottom: var(--spacing-sm);
-}
-
-/* By default (desktop), show the text */
-.desktop-only {
-  display: inline;
-}
-
-/* Hide text on mobile */
-@media screen and (max-width: 768px) {
-  .desktop-only {
-    display: none;
-  }
 }
 
 .login-or-signup-message {

@@ -158,8 +158,19 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   border-color: var(--dark-border-color);
 }
 
+.dark .base-input:hover:not(:disabled) {
+  border-color: var(--dark-text-secondary);
+}
+
 .dark .base-input:focus {
   border-color: var(--dark-primary-color);
+  box-shadow: 0 0 0 2px var(--dark-focus-color);
+}
+
+.dark .base-input:disabled {
+  background-color: var(--dark-background-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-secondary);
 }
 
 .dark .input-icon {
@@ -168,5 +179,9 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 
 .dark .hint-text {
   color: var(--dark-text-secondary);
+}
+
+.dark .error-text {
+  color: var(--error-color);
 }
 </style>

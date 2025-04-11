@@ -15,13 +15,19 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 <style>
 main {
   text-align: center;
-  padding: 20px;
+  padding: var(--spacing-md);
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  overflow-y: hidden;
-  height: 100%;
-  transition: background-color 0.3s, color 0.3s;
+  overflow-y: auto;
+  min-height: calc(100vh - 60px); /* Account for header */
+  background-color: var(--background-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+main.dark {
+  background-color: var(--dark-background-color);
+  color: var(--dark-text-color);
 }
 </style>

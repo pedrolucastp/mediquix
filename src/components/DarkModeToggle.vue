@@ -29,15 +29,25 @@ watch(() => uiStore.isDarkMode, (isDark) => {
   font-size: 1.5rem;
   padding: 0.5rem;
   color: var(--text-color);
-  transition: color 0.3s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dark-mode-toggle:hover {
-  transform: scale(1.1);
-  color: var(--primary-color);
+  transform: scale(1.1) rotate(12deg);
+  background-color: var(--hover-color, rgba(0, 0, 0, 0.05));
 }
 
 :deep(.dark) .dark-mode-toggle {
   color: var(--dark-text-color);
+}
+
+:deep(.dark) .dark-mode-toggle:hover {
+  background-color: var(--dark-hover-color);
 }
 </style>
