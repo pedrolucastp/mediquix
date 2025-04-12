@@ -34,6 +34,7 @@ import {
   faEllipsisH,
   faCheckSquare,
   faUser,
+  faCrown,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -72,4 +73,5 @@ library.add(
   faEllipsisH,
   faCheckSquare,
   faUser,
+  faCrown,
 )

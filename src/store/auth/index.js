@@ -27,6 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
   const username = computed(() => 
     user.value?.settings?.username || user.value?.email?.split('@')[0] || null
   );
+  const isPremium = computed(() => user.value?.settings?.isPremium || false);
 
   // Actions
   async function initializeAuth() {
@@ -67,7 +68,9 @@ export const useAuthStore = defineStore('auth', () => {
         email: email,
         custom_vocabulary: [],
         default_difficulty: Number(settingsStore.settings.defaultDifficulty),
-        default_speciality: Number(settingsStore.settings.defaultSpecialty)
+        default_speciality: Number(settingsStore.settings.defaultSpecialty),
+        isPremium: false,
+        premiumActivatedAt: null
       };
 
       await setDoc(doc(db, "users", user.value.uid), defaultSettings);
@@ -113,17 +116,20 @@ export const useAuthStore = defineStore('auth', () => {
           default_difficulty: Number(settingsStore.settings.defaultDifficulty),
           default_speciality: Number(settingsStore.settings.defaultSpecialty),
           custom_vocabulary: [],
+          isPremium: false,
+          premiumActivatedAt: null
         };
 
-        // Ensure all required fields exist and proper types
         const mergedSettings = {
           ...defaultSettings,
           ...settingsData,
           default_difficulty: Number(settingsData.default_difficulty ?? defaultSettings.default_difficulty),
           default_speciality: Number(settingsData.default_speciality ?? defaultSettings.default_speciality),
-          custom_vocabulary: Array.isArray(settingsData.custom_vocabulary) ? settingsData.custom_vocabulary : []
+          custom_vocabulary: Array.isArray(settingsData.custom_vocabulary) ? settingsData.custom_vocabulary : [],
+          isPremium: Boolean(settingsData.isPremium),
+          premiumActivatedAt: settingsData.premiumActivatedAt || null
         };
-        
+
         if (JSON.stringify(mergedSettings) !== JSON.stringify(settingsData)) {
           await updateDoc(userDocRef, mergedSettings);
         }
@@ -147,14 +153,15 @@ export const useAuthStore = defineStore('auth', () => {
       uiStore.setLoading('userSettings', true);
       const userDocRef = doc(db, "users", user.value.uid);
       
-      // Ensure we have all required fields and proper types
       const currentSettings = user.value.settings || {};
       const updatedSettings = {
         username: newSettings.username || currentSettings.username,
-        email: currentSettings.email, // Don't allow email updates through this method
+        email: currentSettings.email,
         custom_vocabulary: currentSettings.custom_vocabulary || [],
         default_difficulty: Number(newSettings.default_difficulty),
-        default_speciality: Number(newSettings.default_speciality)
+        default_speciality: Number(newSettings.default_speciality),
+        isPremium: Boolean(newSettings.isPremium ?? currentSettings.isPremium),
+        premiumActivatedAt: newSettings.premiumActivatedAt || currentSettings.premiumActivatedAt
       };
 
       await updateDoc(userDocRef, updatedSettings);
@@ -178,10 +185,12 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     userProfile,
     username,
+    isPremium,
     initializeAuth,
     login,
     signup,
     logout,
-    updateUserProfile
+    updateUserProfile,
+    fetchUserSettings
   };
 });

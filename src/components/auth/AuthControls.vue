@@ -5,14 +5,26 @@
     </template>
     <template v-else>
       <template v-if="!authStore.user">
-        <!-- show text only in button for desktop device -->
         <BaseButton variant="primary" icon="sign-in-alt" @click="openAuthModal">
           <span class="desktop-only">Login / Sign Up</span>
-          <!-- <span class="mobile-only">Login</span> -->
         </BaseButton>
       </template>
       <div v-else class="user-area">
         <p class="desktop-only">Olá, {{ authStore.username }}</p>
+        <div class="premium-status" v-if="authStore.isPremium">
+          <span class="premium-badge">
+            <i class="fas fa-crown"></i> Premium
+          </span>
+        </div>
+        <BaseButton 
+          v-else
+          variant="primary" 
+          icon="crown"
+          :loading="uiStore.isLoading('premium')"
+          @click="handlePremiumPurchase"
+        >
+          Get Premium
+        </BaseButton>
         <BaseButton variant="outline" icon="user" @click="openSettingsModal" />
         <BaseButton variant="outline" icon="sign-out-alt" @click="handleLogout" />
       </div>
@@ -118,6 +130,23 @@
         </BaseButton>
       </template>
     </BaseModal>
+
+    <!-- PIX Modal -->
+    <BaseModal v-model="pixModalVisible" title="Pagamento PIX">
+      <div v-if="pixData" class="pix-container">
+        <h3>Escaneie o QR Code para pagar</h3>
+        <img :src="'data:image/png;base64,' + pixData.qrCodeImage" alt="QR Code PIX" class="pix-qr-code" />
+        <div class="pix-code">
+          <p>Ou copie o código PIX:</p>
+          <div class="copy-area">
+            <input type="text" readonly :value="pixData.qrCode" />
+            <BaseButton @click="navigator.clipboard.writeText(pixData.qrCode)" icon="copy">
+              Copiar
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -125,6 +154,7 @@
 import { ref, computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
+import { usePaymentsStore } from '@/store/payments';
 import { specialties } from '@/data/defaultSpecialties';
 import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
@@ -133,6 +163,7 @@ import BaseModal from '@/components/base/BaseModal.vue';
 
 const authStore = useAuthStore();
 const uiStore = useUIStore();
+const paymentsStore = usePaymentsStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
 
 // Auth state
@@ -151,6 +182,10 @@ const settings = ref({
   default_speciality: -1,
 });
 const isSaving = ref(false);
+
+// PIX state
+const pixModalVisible = ref(false);
+const pixData = ref(null);
 
 // Convert specialties array to options format
 const specialtyOptions = computed(() => [
@@ -243,6 +278,15 @@ async function saveSettings() {
     isSaving.value = false;
   }
 }
+
+async function handlePremiumPurchase() {
+  try {
+    pixData.value = await paymentsStore.purchasePremium();
+    pixModalVisible.value = true;
+  } catch (error) {
+    uiStore.setError('premium', error.message);
+  }
+}
 </script>
 
 <style scoped>
@@ -282,5 +326,66 @@ async function saveSettings() {
   font-size: 1rem;
   margin-top: var(--spacing-md);
   text-align: center;
+}
+
+.premium-status {
+  display: flex;
+  align-items: center;
+  margin: 0 var(--spacing-sm);
+}
+
+.premium-badge {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.premium-badge i {
+  color: #FFD700;
+}
+
+.pix-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.pix-qr-code {
+  width: 200px;
+  height: 200px;
+  border: 1px solid var(--border-color);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.pix-code {
+  width: 100%;
+}
+
+.copy-area {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.copy-area input {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
 }
 </style>

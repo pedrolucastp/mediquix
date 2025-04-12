@@ -29,7 +29,7 @@ service cloud.firestore {
 
     // Validate complete user document
     function validateUser(data) {
-      return data.keys().hasAll(['username', 'email', 'custom_vocabulary', 'default_difficulty', 'default_speciality'])
+      return data.keys().hasAll(['username', 'email', 'custom_vocabulary', 'default_difficulty', 'default_speciality', 'isPremium', 'premiumActivatedAt'])
         && isValidString(data.username, 3, 30)
         && isValidString(data.email, 5, 100)
         && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
@@ -38,7 +38,9 @@ service cloud.firestore {
         && ((data.default_difficulty == -1) || (data.default_difficulty >= 1 && data.default_difficulty <= 3))
         && ((data.default_speciality == -1) || (data.default_speciality >= 0 && data.default_speciality < 30))
         && data.custom_vocabulary is list
-        && data.custom_vocabulary.size() <= 1500;
+        && data.custom_vocabulary.size() <= 1500
+        && data.isPremium is bool
+        && (data.premiumActivatedAt == null || data.premiumActivatedAt is timestamp);
     }
 
     // Allow users to read and write only their own data

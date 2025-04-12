@@ -10,16 +10,16 @@
 
         <div class="grid-controls">
           <div class="control-group">
-            <label>Largura:</label>
-            <input type="number" :value="gridWidth" min="5" max="40" @change="handleGridWidthChange" />
+            <label>Largura: {{ gridWidth }}</label>
+            <input type="range" :value="gridWidth" min="5" max="40" @input="handleGridWidthChange" />
           </div>
           <div class="control-group">
-            <label>Altura:</label>
-            <input type="number" :value="gridHeight" min="8" max="20" @change="handleGridHeightChange" />
+            <label>Altura: {{ gridHeight }}</label>
+            <input type="range" :value="gridHeight" min="8" max="20" @input="handleGridHeightChange" />
           </div>
           <div class="control-group">
-            <label>Tamanho da célula:</label>
-            <input type="number" :value="cellSize" min="20" max="40" step="2" @change="handleCellSizeChange" />
+            <label>Tamanho da célula: {{ cellSize }}</label>
+            <input type="range" :value="cellSize" min="20" max="40" step="2" @input="handleCellSizeChange" />
           </div>
         </div>
 
@@ -457,43 +457,81 @@ onMounted(() => {
 .control-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: start;
+  gap: 0.5rem;
 }
 
-.control-group input {
-  width: 60px;
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  text-align: center;
-  font-size: 0.9rem;
+.control-group input[type="range"] {
+  width: 200px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-color);
+  border-radius: 3px;
+  outline: none;
+  padding: 0;
+  margin: 0;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.control-group input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+}
+
+.control-group input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--accent-color);
+}
+
+.control-group input[type="range"]:hover::-moz-range-thumb {
+  background: var(--accent-color);
 }
 
 .control-group label {
   font-size: 0.9rem;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .game-container {
   display: flex;
-  overflow-y: scroll;
-  gap: 1rem;
+  overflow-y: auto;
+  gap: 2rem;
   width: 100%;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background-color: var(--surface-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .game-grid-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: flex-start;
   overflow: auto;
   width: 100%;
   max-width: 100%;
   margin: auto;
+  padding: 10px;
 }
 
 .game-grid {
   display: grid;
-  /* width: 50%; */
 }
 
 .grid-row {
@@ -504,96 +542,154 @@ onMounted(() => {
 .cell {
   width: var(--cell-size);
   height: var(--cell-size);
-  background-color: #fff;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   user-select: none;
   position: relative;
-  transition: background-color 0.3s, color 0.3s;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.cell:hover {
+  background-color: var(--hover-color);
 }
 
 .cell.selected {
   background-color: var(--accent-color);
+  color: white;
+  transform: scale(1.05);
+  z-index: 1;
 }
 
 .cell.found {
-  background-color: #a3e635;
+  background-color: var(--success-color);
   color: white;
-  cursor: default;
-  text-decoration: line-through;
+  border-color: var(--success-color);
 }
 
 .status {
-  margin-top: 20px;
-  font-size: 1.2rem;
-  color: #333;
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: var(--text-color);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-color);
 }
 
 .word-list {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  margin: 0;
+  background-color: var(--surface-color);
+  border-radius: var(--radius-md);
+  min-width: 250px;
 }
 
 .word-list li {
   font-size: 1rem;
-  color: #333;
+  color: var(--text-color);
   text-align: left;
   list-style: none;
-  padding: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--background-color);
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+}
+
+.word-list li span {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 .word-list li.found {
   text-decoration: line-through;
   color: var(--accent-color);
+  background-color: var(--success-color);
+  background-opacity: 0.1;
+  border-color: var(--success-color);
+}
+
+/* Dark mode support */
+:deep(.dark) .game-container {
+  background-color: var(--dark-surface-color);
+}
+
+:deep(.dark) .word-list {
+  background-color: var(--dark-surface-color);
+}
+
+:deep(.dark) .word-list li {
+  background-color: var(--dark-background-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-color);
+}
+
+:deep(.dark) .word-list li span {
+  color: var(--dark-text-secondary);
+}
+
+:deep(.dark) .word-list li.found {
+  color: var(--dark-accent-color);
+  background-color: rgba(72, 187, 120, 0.1);
+  border-color: var(--dark-accent-color);
+}
+
+:deep(.dark) .cell {
+  background-color: var(--dark-surface-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-color);
+}
+
+:deep(.dark) .cell:hover {
+  background-color: var(--dark-hover-color);
+}
+
+:deep(.dark) .cell.selected {
+  background-color: var(--dark-accent-color);
+  color: white;
+}
+
+:deep(.dark) .cell.found {
+  background-color: var(--dark-success-color, #2F855A);
+  border-color: var(--dark-success-color, #2F855A);
+}
+
+:deep(.dark) .status {
+  color: var(--dark-text-color);
+  background-color: var(--dark-surface-color);
 }
 
 @media (max-width: 768px) {
-  .game-grid {
-    margin: auto;
-  }
-
   .game-container {
     flex-direction: column;
+    padding: 0.5rem;
   }
 
-  .cell {
-    width: var(--cell-size);
-    height: var(--cell-size);
-    font-size: 1.6rem;
+  .word-list {
+    min-width: 100%;
+    margin-bottom: 1rem;
   }
 
   .word-list li {
+    padding: 0.5rem;
     font-size: 0.9rem;
-    font-weight: 700;
-    display: flex;
-    flex-direction: column;
-    text-align: left;
   }
 
-  .word-list li span {
-    font-size: 0.8rem;
-    font-weight: 300;
+  .cell {
+    font-size: 0.9rem;
   }
 
   .status {
-    font-size: 1rem;
-  }
-
-  .grid-controls {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .control-group {
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 1rem;
-  }
-
-  .control-group input {
-    width: 100px;
+    font-size: 0.9rem;
   }
 }
 </style>
