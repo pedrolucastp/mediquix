@@ -1,15 +1,16 @@
 <template>
-  <div class="failure-container">
-    <div class="failure-card">
-      <img src="@/assets/icons/alert-circle.svg" alt="Failure" class="failure-icon" />
-      <h2>Falha no Pagamento</h2>
-      <p>Não foi possível processar seu pagamento.</p>
-      <div class="actions">
-        <BaseButton @click="tryAgain" variant="primary">
+  <div class="premium-result">
+    <div class="result-card failure">
+      <font-awesome-icon icon="times" class="result-icon" size="3x" />
+      <h1>Pagamento não concluído</h1>
+      <p>Infelizmente o pagamento não foi concluído ou foi cancelado.</p>
+      <p>Caso queira tentar novamente, clique no botão abaixo.</p>
+      <div class="button-group">
+        <BaseButton @click="goToShop" variant="primary">
           Tentar Novamente
         </BaseButton>
-        <BaseButton @click="goToHome" variant="secondary">
-          Voltar para Início
+        <BaseButton @click="goToHome" variant="outline">
+          Voltar ao Início
         </BaseButton>
       </div>
     </div>
@@ -22,42 +23,55 @@ import BaseButton from '@/components/base/BaseButton.vue';
 
 const router = useRouter();
 
-function tryAgain() {
-  router.push('/shop');
-}
-
 function goToHome() {
   router.push('/');
+}
+
+function goToShop() {
+  router.push('/shop');
 }
 </script>
 
 <style scoped>
-.failure-container {
+.premium-result {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - var(--header-height));
+  min-height: calc(100vh - 120px);
   padding: var(--spacing-lg);
 }
 
-.failure-card {
+.result-card {
   background-color: var(--surface-color);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
   text-align: center;
-  max-width: 400px;
-  width: 100%;
   box-shadow: var(--shadow-md);
+  max-width: 500px;
+  width: 100%;
 }
 
-.failure-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--spacing-md);
+.result-card.failure {
+  border-top: 4px solid var(--error-color);
+}
+
+.result-icon {
   color: var(--error-color);
+  margin-bottom: var(--spacing-md);
 }
 
-.actions {
+h1 {
+  color: var(--error-color);
+  margin-bottom: var(--spacing-md);
+}
+
+p {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+.button-group {
   display: flex;
   gap: var(--spacing-md);
   justify-content: center;

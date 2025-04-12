@@ -1,42 +1,33 @@
 <template>
   <div class="auth-controls" :class="{ dark: isDarkMode }">
-    <template v-if="!authStore.initialized">
-      <BaseButton disabled>Loading...</BaseButton>
+    <!-- Not logged in state -->
+    <template v-if="!authStore.isAuthenticated">
+      <BaseButton @click="showAuthModal = true" variant="primary">
+        Login / Cadastro
+      </BaseButton>
     </template>
+
+    <!-- Logged in state -->
     <template v-else>
-      <template v-if="!authStore.user">
-        <BaseButton variant="primary" icon="sign-in-alt" @click="openAuthModal">
-          <span class="desktop-only">Login / Sign Up</span>
+      <div class="user-area">
+        <font-awesome-icon 
+          v-if="authStore.isPremium" 
+          icon="crown" 
+          class="premium-icon" 
+          title="Usuário Premium" 
+        />
+        <p class="user-email">{{ authStore.user?.email }}</p>
+        <BaseButton @click="showSettingsModal = true" variant="secondary" icon="cog">
+          Settings
         </BaseButton>
-      </template>
-      <div v-else class="user-area">
-        <p class="desktop-only">Olá, {{ authStore.username }}</p>
-        <div class="premium-status" v-if="authStore.isPremium">
-          <span class="premium-badge">
-            <i class="fas fa-crown"></i> Premium
-          </span>
-        </div>
-        <BaseButton 
-          v-else
-          variant="primary" 
-          icon="crown"
-          :loading="uiStore.isLoading('premium')"
-          @click="handlePremiumPurchase"
-        >
-          Get Premium
+        <BaseButton @click="handleLogout" variant="secondary" icon="sign-out-alt">
+          Logout
         </BaseButton>
-        <BaseButton variant="outline" icon="user" @click="openSettingsModal" />
-        <BaseButton variant="outline" icon="sign-out-alt" @click="handleLogout" />
       </div>
     </template>
 
     <!-- Auth Modal -->
-    <BaseModal
-      v-if="showAuthModal"
-      v-model="showAuthModal"
-      :title="isSignup ? 'Sign Up' : 'Login'"
-      @close="closeAuthModal"
-    >
+    <BaseModal v-model="showAuthModal" :title="isSignup ? 'Cadastro' : 'Login'">
       <template v-if="!isSignup">
         <BaseInput
           v-model="loginEmail"
@@ -82,12 +73,7 @@
     </BaseModal>
 
     <!-- Settings Modal -->
-    <BaseModal
-      v-if="showSettingsModal"
-      v-model="showSettingsModal"
-      title="User Settings"
-      @close="closeSettingsModal"
-    >
+    <BaseModal v-model="showSettingsModal" title="Configurações">
       <template #default>
         <template v-if="!authStore.user">
           <p>
@@ -130,23 +116,6 @@
         </BaseButton>
       </template>
     </BaseModal>
-
-    <!-- PIX Modal -->
-    <BaseModal v-model="pixModalVisible" title="Pagamento PIX">
-      <div v-if="pixData" class="pix-container">
-        <h3>Escaneie o QR Code para pagar</h3>
-        <img :src="'data:image/png;base64,' + pixData.qrCodeImage" alt="QR Code PIX" class="pix-qr-code" />
-        <div class="pix-code">
-          <p>Ou copie o código PIX:</p>
-          <div class="copy-area">
-            <input type="text" readonly :value="pixData.qrCode" />
-            <BaseButton @click="navigator.clipboard.writeText(pixData.qrCode)" icon="copy">
-              Copiar
-            </BaseButton>
-          </div>
-        </div>
-      </div>
-    </BaseModal>
   </div>
 </template>
 
@@ -154,7 +123,6 @@
 import { ref, computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
-import { usePaymentsStore } from '@/store/payments';
 import { specialties } from '@/data/defaultSpecialties';
 import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
@@ -163,7 +131,6 @@ import BaseModal from '@/components/base/BaseModal.vue';
 
 const authStore = useAuthStore();
 const uiStore = useUIStore();
-const paymentsStore = usePaymentsStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
 
 // Auth state
@@ -183,10 +150,6 @@ const settings = ref({
 });
 const isSaving = ref(false);
 
-// PIX state
-const pixModalVisible = ref(false);
-const pixData = ref(null);
-
 // Convert specialties array to options format
 const specialtyOptions = computed(() => [
   { value: -1, label: 'Todas' },
@@ -205,15 +168,6 @@ const difficultyOptions = [
 ];
 
 // Auth methods
-function openAuthModal() {
-  showAuthModal.value = true;
-}
-
-function closeAuthModal() {
-  showAuthModal.value = false;
-  isSignup.value = false;
-}
-
 function toggleForm() {
   isSignup.value = !isSignup.value;
 }
@@ -221,7 +175,7 @@ function toggleForm() {
 async function handleLogin() {
   try {
     await authStore.login(loginEmail.value, loginPassword.value);
-    closeAuthModal();
+    showAuthModal.value = false;
   } catch (error) {
     uiStore.setError('auth', error.message);
   }
@@ -230,7 +184,7 @@ async function handleLogin() {
 async function handleSignup() {
   try {
     await authStore.signup(signupEmail.value, signupPassword.value);
-    closeAuthModal();
+    showAuthModal.value = false;
   } catch (error) {
     uiStore.setError('auth', error.message);
   }
@@ -245,46 +199,16 @@ async function handleLogout() {
 }
 
 // Settings methods
-function openSettingsModal() {
-  if (authStore.user && authStore.userProfile) {
-    settings.value = { ...authStore.userProfile };
-  }
-  showSettingsModal.value = true;
-}
-
-function closeSettingsModal() {
-  showSettingsModal.value = false;
-}
-
-function handleLoginClick() {
-  closeSettingsModal();
-  openAuthModal();
-}
-
-function handleRegisterClick() {
-  closeSettingsModal();
-  openAuthModal();
-  toggleForm();
-}
-
 async function saveSettings() {
   try {
     isSaving.value = true;
     await authStore.updateUserProfile(settings.value);
-    closeSettingsModal();
+    showSettingsModal.value = false;
+    uiStore.setSuccess('Configurações salvas com sucesso!');
   } catch (error) {
     uiStore.setError('settings', error.message);
   } finally {
     isSaving.value = false;
-  }
-}
-
-async function handlePremiumPurchase() {
-  try {
-    pixData.value = await paymentsStore.purchasePremium();
-    pixModalVisible.value = true;
-  } catch (error) {
-    uiStore.setError('premium', error.message);
   }
 }
 </script>
@@ -306,6 +230,12 @@ async function handlePremiumPurchase() {
   font-size: 1.1rem;
 }
 
+.user-email {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
 .toggle-link {
   color: var(--accent-color);
   cursor: pointer;
@@ -322,65 +252,9 @@ async function handlePremiumPurchase() {
   margin-bottom: var(--spacing-sm);
 }
 
-.login-or-signup-message {
-  font-size: 1rem;
-  margin-top: var(--spacing-md);
-  text-align: center;
-}
-
-.premium-status {
-  display: flex;
-  align-items: center;
-  margin: 0 var(--spacing-sm);
-}
-
-.premium-badge {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  font-size: 0.85em;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.premium-badge i {
-  color: #FFD700;
-}
-
-.pix-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-}
-
-.pix-qr-code {
-  width: 200px;
-  height: 200px;
-  border: 1px solid var(--border-color);
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-sm);
-}
-
-.pix-code {
-  width: 100%;
-}
-
-.copy-area {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
-}
-
-.copy-area input {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-family: monospace;
+.premium-icon {
+  color: gold;
+  margin-right: var(--spacing-sm);
 }
 
 @media (max-width: 768px) {

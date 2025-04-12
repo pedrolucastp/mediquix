@@ -1,6 +1,7 @@
 const functions = require('firebase-functions/v2/https');
 const express = require('express');
 const cors = require('cors');
+const { mercadoPagoAccessToken } = require('./src/services/mercadopago');
 const paymentsRouter = require('./src/routes/payments');
 const webhooksRouter = require('./src/routes/webhooks');
 
@@ -25,4 +26,5 @@ exports.api = functions.onRequest({
   memory: '256MiB',
   minInstances: 0,
   concurrency: 80,
+  secrets: [mercadoPagoAccessToken] // Add the secret to function dependencies
 }, app);

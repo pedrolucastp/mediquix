@@ -15,36 +15,26 @@ export const usePaymentsStore = defineStore('payments', () => {
 
   // Premium product configuration
   const PREMIUM_PRICE = 19.90; // Price in BRL
-  const POLLING_INTERVAL_MS = 5000; // Check payment status every 5 seconds
-  const PIX_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  const POLLING_INTERVAL_MS = 3000; // Check payment status every 3 seconds
 
-  async function purchasePremium({ isRecurring = false, paymentMethod = 'pix' }) {
+  async function purchasePremium() {
     try {
-      uiStore.setLoading('premium', true);
+      loading.value = true;
+      
       const payment = await createPayment({
         amount: PREMIUM_PRICE,
-        productId: 'premium-access',
-        isRecurring,
-        paymentMethod
+        productId: 'premium-access'
       });
       
-      if (paymentMethod === 'pix') {
-        // Start polling for PIX payment status
-        startPolling(payment.paymentId);
-        
-        return {
-          ...payment,
-          expiresAt: Date.now() + PIX_EXPIRATION_MS
-        };
-      }
+      // Start polling
+      startPolling(payment.id);
       
-      // For wallet payments, return the redirect URL
       return payment;
     } catch (error) {
       uiStore.setError('premium', error.message);
       throw error;
     } finally {
-      uiStore.setLoading('premium', false);
+      loading.value = false;
     }
   }
 
@@ -54,34 +44,35 @@ export const usePaymentsStore = defineStore('payments', () => {
       
       if (status.status === 'approved') {
         stopPolling();
-        authStore.fetchUserSettings(); // Refresh user premium status
+        await authStore.fetchUserSettings();
+        uiStore.setSuccess('Pagamento aprovado! Você agora tem acesso Premium.');
         return true;
       }
       
-      if (status.status === 'cancelled' || status.status === 'expired') {
+      if (['cancelled', 'rejected', 'expired'].includes(status.status)) {
         stopPolling();
-        throw new Error('Payment was cancelled or expired');
+        uiStore.setError('payment', 'O pagamento foi cancelado ou expirou.');
+        return false;
       }
       
       return false;
     } catch (error) {
       console.error('Error checking payment status:', error);
-      stopPolling();
-      throw error;
+      return false;
     }
   }
 
   function startPolling(paymentId) {
     if (pollingInterval.value) {
-      stopPolling();
+      clearInterval(pollingInterval.value);
+      pollingInterval.value = null;
     }
     
     pollingInterval.value = setInterval(async () => {
       try {
         await checkPaymentStatus(paymentId);
       } catch (error) {
-        stopPolling();
-        uiStore.setError('payment', error.message);
+        // Error handling is done in checkPaymentStatus
       }
     }, POLLING_INTERVAL_MS);
   }
@@ -95,14 +86,14 @@ export const usePaymentsStore = defineStore('payments', () => {
 
   async function loadPurchaseHistory() {
     try {
-      uiStore.setLoading('orders', true);
+      loading.value = true;
       const purchaseHistory = await getPurchaseHistory();
       orders.value = purchaseHistory;
     } catch (error) {
       uiStore.setError('orders', error.message);
       throw error;
     } finally {
-      uiStore.setLoading('orders', false);
+      loading.value = false;
     }
   }
 

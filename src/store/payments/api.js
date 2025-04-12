@@ -3,7 +3,13 @@ import { auth } from '@/firebase';
 const API_BASE_URL = 'https://api-3jnfwp2o6q-uc.a.run.app';
 
 async function getAuthHeader() {
-  const token = await auth.currentUser?.getIdToken();
+  if (!auth.currentUser) {
+    throw new Error('User must be logged in to perform this action');
+  }
+  const token = await auth.currentUser.getIdToken();
+  if (!token) {
+    throw new Error('Failed to get authentication token');
+  }
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -18,13 +24,13 @@ export async function createPayment({ amount, productId }) {
       headers,
       body: JSON.stringify({
         amount,
-        productId,
-        userId: auth.currentUser?.uid
+        productId
       })
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create payment');
+      const errorData = await response.json();
+      throw new Error(errorData.details || 'Failed to create payment');
     }
 
     return await response.json();
@@ -42,7 +48,8 @@ export async function getPaymentStatus(paymentId) {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch payment status');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch payment status');
     }
 
     return await response.json();
@@ -55,12 +62,13 @@ export async function getPaymentStatus(paymentId) {
 export async function getPurchaseHistory() {
   try {
     const headers = await getAuthHeader();
-    const response = await fetch(`${API_BASE_URL}/purchase-history/${auth.currentUser?.uid}`, {
+    const response = await fetch(`${API_BASE_URL}/purchase-history`, {
       headers
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch purchase history');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch purchase history');
     }
 
     return await response.json();

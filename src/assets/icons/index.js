@@ -35,6 +35,9 @@ import {
   faCheckSquare,
   faUser,
   faCrown,
+  faCopy,
+  faClock,
+  faExclamationCircle,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -74,4 +77,7 @@ library.add(
   faCheckSquare,
   faUser,
   faCrown,
+  faCopy,
+  faClock,
+  faExclamationCircle,
 )
