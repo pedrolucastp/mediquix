@@ -2,7 +2,7 @@
   <div class="home-container" :class="{ dark: isDarkMode }">
     <header class="home-header">
       <h1>MediQuix</h1>
-      <p class="tagline">Mediquês na ponta da língua</p>
+      <p class="tagline">Medicina na ponta da língua</p>
       <!-- <p>Jogos interativos para aprimorar seu conhecimento médico</p> -->
     </header>
     <div class="game-carousel">
