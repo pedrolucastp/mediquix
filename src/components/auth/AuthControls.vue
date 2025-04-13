@@ -12,8 +12,10 @@
       <div class="user-area">
         <BaseButton @click="getApprouvedPaymentsHistory">
           <p class="user-email">
+            <!-- add user icon -->
             <font-awesome-icon v-if="authStore.isPremium" class="premium-icon" icon="crown" title="Usuário Premium" />
-            {{ authStore.user?.email }}
+            <font-awesome-icon :icon="['fas', 'user']" class="user-icon" />
+            <!-- {{ authStore.user?.email }} -->
           </p>
         </BaseButton>
 
