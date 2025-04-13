@@ -1,8 +1,5 @@
 <template>
   <footer :class="{ dark: isDarkMode }">
-    <!-- <nav class="footer-nav">
-      <router-link to="/"><h3>Início</h3></router-link>
-    </nav> -->
     <div id="install-icon"></div>
     <small>&copy; MediQuix 2024. Todos os direitos reservados.</small>
   </footer>
@@ -14,7 +11,6 @@ import { useUIStore } from "@/store/ui";
 
 const uiStore = useUIStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
-
 </script>
 
 <style scoped>
@@ -26,7 +22,16 @@ footer {
   flex-direction: column;
   align-items: center;
   width: 100%;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  border-top: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
 
+footer.dark {
+  --surface-color: var(--dark-surface-color);
+  --text-color: var(--dark-text-color);
+  --border-color: var(--dark-border-color);
 }
 
 .footer-nav {
@@ -41,27 +46,30 @@ footer {
 }
 
 .footer-nav a:hover {
-  color: #2ecc71;
+  color: var(--accent-color);
 }
 
 #install-icon {
   display: flex;
   width: 100%;
-  /* padding: 10px 30px; */
 }
 
 #install-icon button {
   padding: 10px 20px;
   font-size: 1.2rem;
-  background-color: #2980b9;
-  color: #fff;
+  background-color: var(--accent-color);
+  color: var(--surface-color);
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   margin: 10px;
   display: flex;
   width: 100%;
   justify-content: center;
+  transition: background-color 0.3s ease;
 }
 
+#install-icon button:hover {
+  background-color: var(--accent-hover);
+}
 </style>
