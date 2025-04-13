@@ -1,8 +1,9 @@
 <template>
   <div class="home-container" :class="{ dark: isDarkMode }">
     <header class="home-header">
-      <h1>Welcome to MediQuix</h1>
-      <p>Engaging games to enhance your medical knowledge</p>
+      <h1>Bem-vindo ao MediQuix</h1>
+      <p class="tagline">Deixe o mediquês sempre na ponta da língua!</p>
+      <!-- <p>Jogos interativos para aprimorar seu conhecimento médico</p> -->
     </header>
     <div class="game-carousel">
       <router-link v-for="(game, index) in games" :key="index" :to="game.link" class="game-card" :class="{ highlight: game.highlight }">
@@ -40,8 +41,9 @@ const games = [
   justify-content: center;
   height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
-  color: #fff;
+  /* background: linear-gradient(135deg, #4facfe, #00f2fe); */
+  background: lightgoldenrodyellow;
+  color: var(--text-color);
   text-align: center;
   padding: 2rem;
   transition: all 0.5s ease
@@ -49,7 +51,7 @@ const games = [
 
 .home-container.dark {
   background: linear-gradient(135deg, #1e1e1e, #3a3a3a);
-  color: #e0e0e0;
+  color: var(--dark-text-color);
 }
 
 .home-header {
@@ -59,7 +61,7 @@ const games = [
 .home-header h1 {
   font-size: 3rem;
   font-weight: bold;
-  margin-bottom: 0.5rem;
+  /* margin-bottom: 0.5rem; */
 }
 
 .home-header p {
@@ -100,8 +102,16 @@ const games = [
 .icon-container {
   margin-bottom: 1rem;
   color: #4facfe;
+  transition: color 0.3s ease;
 }
 
+.game-card:hover .icon-container {
+  color: #ff7e5f;  /* accent color matching the highlight gradient */
+}
+
+.game-card.dark:hover .icon-container {
+  color: #feb47b;  /* lighter accent color for dark mode */
+}
 .game-title {
   font-size: 1.5rem;
   font-weight: bold;
@@ -116,11 +126,23 @@ const games = [
 }
 
 .highlight {
-  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  background: linear-gradient(135deg, #880788, #3b0380);
   color: #fff;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
   border-width: 3px;
 }
+.tagline {
+  font-size: 1.2rem;
+  font-style: italic;
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+  opacity: 0.9;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* .home-container.dark .tagline {
+  color: #e0e0e0;
+} */
 
 @media only screen and (max-width: 768px) {
   .home-header h1 {
@@ -146,6 +168,9 @@ const games = [
 
   .game-description {
     font-size: 0.9rem;
+  }
+  .tagline {
+    font-size: 1rem;
   }
 }
 </style>
