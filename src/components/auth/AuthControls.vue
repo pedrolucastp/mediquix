@@ -2,7 +2,7 @@
   <div class="auth-controls" :class="{ dark: isDarkMode }">
     <!-- Not logged in state -->
     <template v-if="!authStore.isAuthenticated">
-      <BaseButton @click="showAuthModal = true" variant="primary">
+      <BaseButton @click="showAuthModal = true" variant="primary"  :disabled="isLoading">
         Login / Cadastro
       </BaseButton>
     </template>
@@ -10,21 +10,13 @@
     <!-- Logged in state -->
     <template v-else>
       <div class="user-area">
-        <font-awesome-icon 
-          v-if="authStore.isPremium" 
-          icon="crown" 
-          class="premium-icon" 
-          title="Usuário Premium" 
-        />
+        <font-awesome-icon v-if="authStore.isPremium" icon="crown" class="premium-icon" title="Usuário Premium" />
         <p class="user-email">{{ authStore.user?.email }}</p>
         <BaseButton @click="showShopModal = true" variant="primary" icon="heart">
-          Apoiar
         </BaseButton>
-        <BaseButton @click="showSettingsModal = true" variant="secondary" icon="cog">
-          Meu Usuário
+        <BaseButton @click="showSettingsModal = true" variant="secondary" icon="cog" :disabled="isLoading">
         </BaseButton>
-        <BaseButton @click="handleLogout" variant="secondary" icon="sign-out-alt">
-          Logout
+        <BaseButton @click="handleLogout" variant="secondary" icon="sign-out-alt" :disabled="isLoading">
         </BaseButton>
       </div>
     </template>
@@ -37,20 +29,11 @@
     <!-- Auth Modal -->
     <BaseModal v-model="showAuthModal" :title="isSignup ? 'Cadastro' : 'Login'">
       <template v-if="!isSignup">
-        <BaseInput
-          v-model="loginEmail"
-          type="email"
-          placeholder="Email"
-          icon="envelope"
-        />
-        <BaseInput
-          v-model="loginPassword"
-          type="password"
-          placeholder="Password"
-          icon="lock"
-        />
-        <BaseButton class="modal-btn" icon="sign-in-alt" @click="handleLogin">
-          Login
+        <BaseInput v-model="loginEmail" type="email" placeholder="Email" icon="envelope" :disabled="isLoading" />
+        <BaseInput v-model="loginPassword" type="password" placeholder="Password" icon="lock" :disabled="isLoading" />
+        <BaseButton class="modal-btn" icon="sign-in-alt" :loading="isLoading" :disabled="isLoading"
+          @click="handleLogin">
+          {{ isLoading ? 'Entrando...' : 'Login' }}
         </BaseButton>
         <p class="login-or-signup-message">
           Don't have an account?
@@ -58,20 +41,10 @@
         </p>
       </template>
       <template v-else>
-        <BaseInput
-          v-model="signupEmail"
-          type="email"
-          placeholder="Email"
-          icon="envelope"
-        />
-        <BaseInput
-          v-model="signupPassword"
-          type="password"
-          placeholder="Password"
-          icon="lock"
-        />
-        <BaseButton class="modal-btn" icon="user-plus" @click="handleSignup">
-          Sign Up
+        <BaseInput v-model="signupEmail" type="email" placeholder="Email" icon="envelope" :disabled="isLoading" />
+        <BaseInput v-model="signupPassword" type="password" placeholder="Password" icon="lock" :disabled="isLoading" />
+        <BaseButton class="modal-btn" icon="user-plus" :loading="isLoading" :disabled="isLoading" @click="handleSignup">
+          {{ isLoading ? 'Criando conta...' : 'Sign Up' }}
         </BaseButton>
         <p>
           Already have an account?
@@ -93,34 +66,17 @@
           </p>
         </template>
         <template v-else>
-          <BaseInput
-            v-model="settings.username"
-            label="Username"
-            :disabled="!authStore.user || isSaving"
-          />
-          <BaseSelect
-            v-model="settings.default_difficulty"
-            :options="difficultyOptions"
-            label="Default Difficulty"
-            :disabled="!authStore.user || isSaving"
-          />
-          <BaseSelect
-            v-model="settings.default_speciality"
-            :options="specialtyOptions"
-            label="Default Specialty"
-            :disabled="!authStore.user || isSaving"
-          />
+          <BaseInput v-model="settings.username" label="Username" :disabled="!authStore.user || isLoading" />
+          <BaseSelect v-model="settings.default_difficulty" :options="difficultyOptions" label="Default Difficulty"
+            :disabled="!authStore.user || isLoading" />
+          <BaseSelect v-model="settings.default_speciality" :options="specialtyOptions" label="Default Specialty"
+            :disabled="!authStore.user || isLoading" />
         </template>
       </template>
       <template #footer>
-        <BaseButton
-          variant="primary"
-          icon="save"
-          :disabled="!authStore.user || isSaving"
-          :loading="isSaving"
-          @click="saveSettings"
-        >
-          {{ isSaving ? 'Saving...' : 'Save Settings' }}
+        <BaseButton variant="primary" icon="save" :disabled="!authStore.user || isLoading" :loading="isLoading"
+          @click="saveSettings">
+          {{ isLoading ? 'Saving...' : 'Save Settings' }}
         </BaseButton>
       </template>
     </BaseModal>
@@ -157,7 +113,7 @@ const settings = ref({
   default_difficulty: -1,
   default_speciality: -1,
 });
-const isSaving = ref(false);
+const isLoading = ref(false);
 
 // Shop state
 const showShopModal = ref(false);
@@ -186,41 +142,50 @@ function toggleForm() {
 
 async function handleLogin() {
   try {
+    isLoading.value = true;
     await authStore.login(loginEmail.value, loginPassword.value);
     showAuthModal.value = false;
   } catch (error) {
     uiStore.setError('auth', error.message);
+  } finally {
+    isLoading.value = false;
   }
 }
 
 async function handleSignup() {
   try {
+    isLoading.value = true;
     await authStore.signup(signupEmail.value, signupPassword.value);
     showAuthModal.value = false;
   } catch (error) {
     uiStore.setError('auth', error.message);
+  } finally {
+    isLoading.value = false;
   }
 }
 
 async function handleLogout() {
   try {
+    isLoading.value = true;
     await authStore.logout();
   } catch (error) {
     uiStore.setError('auth', error.message);
+  } finally {
+    isLoading.value = false;
   }
 }
 
 // Settings methods
 async function saveSettings() {
   try {
-    isSaving.value = true;
+    isLoading.value = true;
     await authStore.updateUserProfile(settings.value);
     showSettingsModal.value = false;
     uiStore.setSuccess('Configurações salvas com sucesso!');
   } catch (error) {
     uiStore.setError('settings', error.message);
   } finally {
-    isSaving.value = false;
+    isLoading.value = false;
   }
 }
 </script>
