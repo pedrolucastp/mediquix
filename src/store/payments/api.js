@@ -77,3 +77,22 @@ export async function getPurchaseHistory() {
     throw error;
   }
 }
+
+export async function getDonationsHistory() {
+  try {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_BASE_URL}/donations`, {
+      headers
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch donations history');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching donations history:', error);
+    throw error;
+  }
+}

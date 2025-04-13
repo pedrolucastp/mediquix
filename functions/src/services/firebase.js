@@ -35,8 +35,8 @@ async function storePayment({ paymentId, userId, amount, status, productId, paym
         const doc = snapshot.docs[0];
         await doc.ref.update({
           userId: userId || doc.data().userId,
-          amount: amount || mercadoPagoResponse?.transaction_amount || doc.data().amount,
-          status: status || doc.data().status,
+          amount: Number(amount || mercadoPagoResponse?.transaction_amount || doc.data().amount),
+          status: (status || doc.data().status).toLowerCase(),
           productId: productId || mercadoPagoResponse?.metadata?.product_id || doc.data().productId,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           ...(mercadoPagoResponse && { mercadoPagoResponse }),
@@ -50,8 +50,8 @@ async function storePayment({ paymentId, userId, amount, status, productId, paym
     // Create new payment document with required fields
     const paymentData = {
       userId,
-      amount: amount || mercadoPagoResponse?.transaction_amount || 0,
-      status,
+      amount: Number(amount || mercadoPagoResponse?.transaction_amount || 0),
+      status: status.toLowerCase(),
       productId: productId || mercadoPagoResponse?.metadata?.product_id,
       paymentMethod: paymentMethod || mercadoPagoResponse?.payment_method_id,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -61,13 +61,16 @@ async function storePayment({ paymentId, userId, amount, status, productId, paym
       ...(mercadoPagoResponse && { mercadoPagoResponse })
     };
 
-    // Validate required fields
+    // Validate required fields and data types
     if (!paymentData.userId || !paymentData.productId) {
       throw new Error('Missing required payment data: userId and productId are required');
     }
+    if (isNaN(paymentData.amount)) {
+      throw new Error('Invalid amount: must be a number');
+    }
 
     const docRef = await admin.firestore().collection('payments').add(paymentData);
-    console.log(`[Firebase Service] Created new payment document ${docRef.id}`);
+    console.log(`[Firebase Service] Created new payment document ${docRef.id}:`, paymentData);
     return docRef.id;
   } catch (error) {
     console.error('[Firebase Service] Error storing payment:', error);
@@ -76,7 +79,10 @@ async function storePayment({ paymentId, userId, amount, status, productId, paym
 }
 
 async function updatePaymentStatus(paymentId, status, additionalData = {}) {
-  console.log(`[Firebase Service] Updating payment ${paymentId} status to ${status}`);
+  console.log(`[Firebase Service] Updating payment ${paymentId} status to ${status}`, {
+    additionalData,
+    currentTimestamp: new Date().toISOString()
+  });
   
   try {
     const snapshot = await admin.firestore().collection('payments')
@@ -85,7 +91,13 @@ async function updatePaymentStatus(paymentId, status, additionalData = {}) {
 
     if (snapshot.empty) {
       // If payment not found, create a new one with minimum data
-      console.log(`[Firebase Service] Payment ${paymentId} not found, creating new document`);
+      console.log(`[Firebase Service] Payment ${paymentId} not found, creating new document with data:`, {
+        userId: additionalData.userId,
+        amount: additionalData.mercadoPagoResponse?.transaction_amount,
+        status,
+        productId: additionalData.mercadoPagoResponse?.metadata?.product_id || additionalData.productId
+      });
+      
       await storePayment({
         paymentId,
         userId: additionalData.userId,
@@ -99,6 +111,15 @@ async function updatePaymentStatus(paymentId, status, additionalData = {}) {
     }
 
     const doc = snapshot.docs[0];
+    const currentData = doc.data();
+    console.log(`[Firebase Service] Found existing payment:`, {
+      id: doc.id,
+      currentStatus: currentData.status,
+      newStatus: status,
+      currentAmount: currentData.amount,
+      userId: currentData.userId
+    });
+
     const updateData = {
       status,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -107,10 +128,11 @@ async function updatePaymentStatus(paymentId, status, additionalData = {}) {
 
     if (status === 'approved') {
       updateData.approvedAt = admin.firestore.FieldValue.serverTimestamp();
+      console.log(`[Firebase Service] Setting approvedAt timestamp for payment ${paymentId}`);
     }
 
     await doc.ref.update(updateData);
-    console.log(`[Firebase Service] Successfully updated payment ${paymentId} status`);
+    console.log(`[Firebase Service] Successfully updated payment ${paymentId}. New data:`, updateData);
 
     // If approved, update user premium status
     if (status === 'approved' && additionalData.userId) {
@@ -167,6 +189,61 @@ async function getUserPayments(userId) {
   }));
 }
 
+async function getUserApprovedPayments(userId) {
+  try {
+    console.log(`[Firebase Service] Fetching approved payments for user ${userId}`);
+    
+    const snapshot = await admin.firestore().collection('payments')
+      .where('userId', '==', userId)
+      .where('status', '==', 'approved')
+      .get();
+    
+    console.log(`[Firebase Service] Found ${snapshot.size} approved payments`);
+    
+    const payments = snapshot.docs.map(doc => {
+      const data = doc.data();
+      console.log(`[Firebase Service] Payment document:`, {
+        id: doc.id,
+        status: data.status,
+        amount: data.amount,
+        createdAt: data.createdAt,
+        approvedAt: data.approvedAt
+      });
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+        approvedAt: data.approvedAt?.toDate()
+      };
+    });
+
+    const totalDonated = payments.reduce((sum, payment) => {
+      const amount = Number(payment.amount) || 0;
+      console.log(`[Firebase Service] Adding amount to total:`, { 
+        paymentId: payment.id, 
+        amount, 
+        currentTotal: sum 
+      });
+      return sum + amount;
+    }, 0);
+
+    console.log(`[Firebase Service] Total donated:`, {
+      userId,
+      totalDonated,
+      paymentsCount: payments.length
+    });
+
+    return {
+      payments,
+      totalDonated,
+      count: payments.length
+    };
+  } catch (error) {
+    console.error('[Firebase Service] Error getting user approved payments:', error);
+    throw error;
+  }
+}
+
 async function getPaymentById(paymentId) {
   const snapshot = await admin.firestore().collection('payments')
     .where('paymentId', '==', paymentId)
@@ -191,5 +268,6 @@ module.exports = {
   updatePaymentStatus,
   updateUserPremiumStatus,
   getUserPayments,
-  getPaymentById
+  getPaymentById,
+  getUserApprovedPayments
 };

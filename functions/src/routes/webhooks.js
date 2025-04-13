@@ -26,16 +26,14 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
     // Create a unique key for this webhook
     const webhookKey = `${data.id}-${action}-${Date.now()}`;
     
-    // Check if we've recently processed this webhook
     if (processedWebhooks.has(webhookKey)) {
       console.log('[Webhook] Skipping duplicate webhook:', { action, data });
       return res.sendStatus(200);
     }
     
-    // Mark this webhook as being processed
     processedWebhooks.set(webhookKey, Date.now());
 
-    console.log('[Webhook] Received webhook:', { action, data });
+    console.log('[Webhook] Received webhook:', { action, data, type: typeof data });
     
     if (!data.id) {
       throw new Error('Payment ID is missing from webhook data');
@@ -44,13 +42,16 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
     // Get full payment details from MercadoPago
     const paymentData = await getPayment(data.id);
     const userId = paymentData.metadata?.user_id;
+    const status = paymentData.status.toLowerCase(); // Normalize status to lowercase
     
     console.log('[Webhook] Payment details:', {
       id: paymentData.id,
-      status: paymentData.status,
+      status,
+      originalStatus: paymentData.status,
       paymentMethodId: paymentData.payment_method_id,
       metadata: paymentData.metadata,
-      userId
+      userId,
+      amount: paymentData.transaction_amount
     });
 
     // Handle different payment statuses
@@ -58,22 +59,22 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
       const baseUpdateData = {
         userId,
         productId: paymentData.metadata?.product_id,
-        amount: paymentData.transaction_amount,
+        amount: Number(paymentData.transaction_amount), // Ensure amount is a number
         mercadoPagoResponse: paymentData
       };
 
-      switch (paymentData.status) {
+      console.log('[Webhook] Base update data:', baseUpdateData);
+
+      switch (status) {
         case 'approved':
           console.log(`[Webhook] Processing approved payment ${data.id}`);
           
-          // Update payment first before activating premium
           await updatePaymentStatus(data.id, 'approved', {
             ...baseUpdateData,
             approvedAt: new Date(paymentData.date_approved),
             transactionId: paymentData.transaction_details?.transaction_id
           });
           
-          // Activate premium for the user
           if (userId) {
             try {
               console.log(`[Webhook] Attempting to activate premium for user ${userId}`);
@@ -102,8 +103,8 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
 
         case 'cancelled':
         case 'rejected':
-          console.log(`[Webhook] Processing ${paymentData.status} payment ${data.id}`);
-          await updatePaymentStatus(data.id, paymentData.status, {
+          console.log(`[Webhook] Processing ${status} payment ${data.id}`);
+          await updatePaymentStatus(data.id, status, {
             ...baseUpdateData,
             statusDetail: paymentData.status_detail
           });
@@ -127,21 +128,22 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
           break;
 
         default:
-          console.log(`[Webhook] Unhandled payment status: ${paymentData.status}`);
-          // Still update the payment status in our database
-          await updatePaymentStatus(data.id, paymentData.status, baseUpdateData);
+          console.log(`[Webhook] Unhandled payment status: ${status}`);
+          await updatePaymentStatus(data.id, status, baseUpdateData);
       }
+
+      // Successfully processed webhook
+      res.sendStatus(200);
     } catch (error) {
       console.error('[Webhook] Error processing payment status:', {
         error: error.message,
         stack: error.stack,
         paymentId: data.id,
-        status: paymentData.status
+        status
       });
       // Don't rethrow - we want to return 200 to MercadoPago
+      res.sendStatus(200);
     }
-
-    res.sendStatus(200);
   } catch (error) {
     console.error('[Webhook] Processing error:', {
       error: error.message,

@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { createPayment, getPaymentStatus, getPurchaseHistory } from './api';
+import { createPayment, getPaymentStatus, getPurchaseHistory, getDonationsHistory } from './api';
 import { useUIStore } from '../ui';
 import { useAuthStore } from '../auth';
 
 export const usePaymentsStore = defineStore('payments', () => {
   const orders = ref([]);
+  const donationsHistory = ref(null);
   const uiStore = useUIStore();
   const authStore = useAuthStore();
   
@@ -105,13 +106,29 @@ export const usePaymentsStore = defineStore('payments', () => {
     }
   }
 
+  async function loadDonationsHistory() {
+    try {
+      loading.value = true;
+      const donations = await getDonationsHistory();
+      donationsHistory.value = donations;
+      return donations;
+    } catch (error) {
+      uiStore.setError('donations', error.message);
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   return {
     orders,
     loading,
     error,
+    donationsHistory,
     purchasePremium,
     loadPurchaseHistory,
     checkPaymentStatus,
-    stopPolling
+    stopPolling,
+    loadDonationsHistory
   };
 });

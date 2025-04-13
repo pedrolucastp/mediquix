@@ -2,7 +2,7 @@
   <div class="auth-controls" :class="{ dark: isDarkMode }">
     <!-- Not logged in state -->
     <template v-if="!authStore.isAuthenticated">
-      <BaseButton @click="showAuthModal = true" variant="primary"  :disabled="isLoading">
+      <BaseButton @click="showAuthModal = true" variant="primary" :disabled="isLoading">
         Login / Cadastro
       </BaseButton>
     </template>
@@ -10,16 +10,92 @@
     <!-- Logged in state -->
     <template v-else>
       <div class="user-area">
-        <font-awesome-icon v-if="authStore.isPremium" icon="crown" class="premium-icon" title="Usuário Premium" />
-        <p class="user-email">{{ authStore.user?.email }}</p>
-        <BaseButton @click="showShopModal = true" variant="primary" icon="heart">
+        <BaseButton @click="getApprouvedPaymentsHistory">
+          <p class="user-email">
+            <font-awesome-icon v-if="authStore.isPremium" class="premium-icon" icon="crown" title="Usuário Premium" />
+            {{ authStore.user?.email }}
+          </p>
         </BaseButton>
-        <BaseButton @click="showSettingsModal = true" variant="secondary" icon="cog" :disabled="isLoading">
-        </BaseButton>
-        <BaseButton @click="handleLogout" variant="secondary" icon="sign-out-alt" :disabled="isLoading">
-        </BaseButton>
+
       </div>
     </template>
+
+
+
+    <!-- User Modal -->
+    <BaseModal v-model="showUserModal" title="Meu MediQuix">
+      <div class="user-profile">
+        <!-- User Info Section -->
+        <div class="profile-section">
+          <div class="profile-header">
+            <font-awesome-icon :icon="['fas', 'user']" class="profile-icon" />
+            <div class="profile-info">
+              <h3>{{ authStore.username || authStore.user?.email }}</h3>
+              <span class="member-status">
+                <font-awesome-icon v-if="authStore.isPremium" icon="crown" class="premium-icon"
+                  title="Usuário Premium" />
+                {{ authStore.isPremium ? 'Membro Premium' : 'Membro Gratuito' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Donations Section hided for now-->
+        <div class="profile-section donations-section" style ="display: none;">
+          <h4>
+            <font-awesome-icon icon="heart" class="section-icon" />
+            Histórico de Apoio
+          </h4>
+          <div class="donations-content">
+            <template v-if="isLoading">
+              <div class="loading-state">
+                <font-awesome-icon icon="circle-notch" spin />
+                <span>Carregando doações...</span>
+              </div>
+            </template>
+            <template v-else-if="donationsHistory?.count > 0">
+              <div class="donation-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Total Doado</span>
+                  <span class="stat-value">R$ {{ totalDonations }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Doações</span>
+                  <span class="stat-value">{{ donationsHistory.count }}</span>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <p class="empty-state">
+                <font-awesome-icon icon="info-circle" />
+                Você ainda não fez nenhuma doação
+              </p>
+            </template>
+          </div>
+        </div>
+
+        <!-- Quick Actions Section -->
+        <div class="profile-section actions-section">
+          <h4>
+            <font-awesome-icon icon="bolt" class="section-icon" />
+            Ações Rápidas
+          </h4>
+          <div class="quick-actions">
+            <BaseButton @click="showShopModal = true" variant="primary" icon="heart" class="action-button">
+              Apoiar MediQuix
+            </BaseButton>
+            <BaseButton @click="showSettingsModal = true" variant="secondary" icon="cog" class="action-button"
+              :disabled="isLoading">
+              Configurações
+            </BaseButton>
+            <BaseButton @click="handleLogout" variant="outline" icon="sign-out-alt" class="action-button"
+              :disabled="isLoading">
+              Sair
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
 
     <!-- Shop Modal -->
     <BaseModal v-model="showShopModal" title="Apoie o MediQuix">
@@ -27,30 +103,64 @@
     </BaseModal>
 
     <!-- Auth Modal -->
-    <BaseModal v-model="showAuthModal" :title="isSignup ? 'Cadastro' : 'Login'">
-      <template v-if="!isSignup">
-        <BaseInput v-model="loginEmail" type="email" placeholder="Email" icon="envelope" :disabled="isLoading" />
-        <BaseInput v-model="loginPassword" type="password" placeholder="Password" icon="lock" :disabled="isLoading" />
-        <BaseButton class="modal-btn" icon="sign-in-alt" :loading="isLoading" :disabled="isLoading"
-          @click="handleLogin">
-          {{ isLoading ? 'Entrando...' : 'Login' }}
-        </BaseButton>
-        <p class="login-or-signup-message">
-          Don't have an account?
-          <a class="toggle-link" @click="toggleForm">Sign up</a>
-        </p>
-      </template>
-      <template v-else>
-        <BaseInput v-model="signupEmail" type="email" placeholder="Email" icon="envelope" :disabled="isLoading" />
-        <BaseInput v-model="signupPassword" type="password" placeholder="Password" icon="lock" :disabled="isLoading" />
-        <BaseButton class="modal-btn" icon="user-plus" :loading="isLoading" :disabled="isLoading" @click="handleSignup">
-          {{ isLoading ? 'Criando conta...' : 'Sign Up' }}
-        </BaseButton>
-        <p>
-          Already have an account?
-          <a class="toggle-link" @click="toggleForm">Login</a>
-        </p>
-      </template>
+    <BaseModal v-model="showAuthModal" :title="isSignup ? 'Bem-vindo ao MediQuix!' : 'Bem-vindo de volta!'">
+      <div class="auth-modal-content">
+        <!-- App Introduction -->
+        <div class="app-intro">
+          <img src="@/assets/logo.svg" alt="MediQuix Logo" class="intro-logo" />
+          <h2 class="intro-title">Aprendizado médico gamificado</h2>
+          <p class="intro-text">
+            MediQuix é um projeto acadêmico desenvolvido para ajudar estudantes de medicina
+            a expandir seu vocabulário médico através de jogos interativos e divertidos.
+          </p>
+          <div class="feature-list">
+            <div class="feature-item">
+              <font-awesome-icon icon="gamepad" class="feature-icon" />
+              <span>Jogos educativos</span>
+            </div>
+            <div class="feature-item">
+              <font-awesome-icon icon="book-medical" class="feature-icon" />
+              <span>Vocabulário especializado</span>
+            </div>
+            <div class="feature-item">
+              <font-awesome-icon icon="chart-line" class="feature-icon" />
+              <span>Acompanhe seu progresso</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auth Forms -->
+        <div class="auth-forms">
+          <template v-if="!isSignup">
+            <BaseInput v-model="loginEmail" type="email" placeholder="Seu email" icon="envelope"
+              :disabled="isLoading" />
+            <BaseInput v-model="loginPassword" type="password" placeholder="Sua senha" icon="lock"
+              :disabled="isLoading" />
+            <BaseButton class="modal-btn" icon="sign-in-alt" :loading="isLoading" :disabled="isLoading"
+              @click="handleLogin">
+              {{ isLoading ? 'Entrando...' : 'Entrar' }}
+            </BaseButton>
+            <p class="auth-switch-text">
+              Ainda não tem uma conta?
+              <a class="toggle-link" @click="toggleForm">Criar conta</a>
+            </p>
+          </template>
+          <template v-else>
+            <BaseInput v-model="signupEmail" type="email" placeholder="Seu melhor email" icon="envelope"
+              :disabled="isLoading" />
+            <BaseInput v-model="signupPassword" type="password" placeholder="Escolha uma senha segura" icon="lock"
+              :disabled="isLoading" />
+            <BaseButton class="modal-btn" icon="user-plus" :loading="isLoading" :disabled="isLoading"
+              @click="handleSignup">
+              {{ isLoading ? 'Criando conta...' : 'Criar conta' }}
+            </BaseButton>
+            <p class="auth-switch-text">
+              Já tem uma conta?
+              <a class="toggle-link" @click="toggleForm">Entrar</a>
+            </p>
+          </template>
+        </div>
+      </div>
     </BaseModal>
 
     <!-- Settings Modal -->
@@ -84,9 +194,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
+import { usePaymentsStore } from '@/store/payments';
 import { specialties } from '@/data/defaultSpecialties';
 import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
@@ -96,7 +207,9 @@ import ShopComponent from '@/components/ShopComponent.vue';
 
 const authStore = useAuthStore();
 const uiStore = useUIStore();
+const paymentsStore = usePaymentsStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
+const isLoading = ref(false);
 
 // Auth state
 const showAuthModal = ref(false);
@@ -113,7 +226,30 @@ const settings = ref({
   default_difficulty: -1,
   default_speciality: -1,
 });
-const isLoading = ref(false);
+
+// Donations history
+const showUserModal = ref(false);
+const donationsHistory = ref([]);
+const totalDonations = ref("");
+
+async function getApprouvedPaymentsHistory() {
+  isLoading.value = true;
+  showUserModal.value = true;
+  try {
+    donationsHistory.value = await paymentsStore.loadDonationsHistory();
+
+    console.log('donations', donationsHistory.value);
+    // Calculate total donations in BRL using donationsHistory.value.payments.amount
+    totalDonations.value = donationsHistory.value.payments.reduce((acc, donation) => {
+      return acc + donation.amount;
+    }, 0).toFixed(2); // Convert to BRL format
+  } catch (error) {
+    console.error('Failed to load donations history:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 
 // Shop state
 const showShopModal = ref(false);
@@ -210,13 +346,20 @@ async function saveSettings() {
 .user-email {
   margin: 0;
   font-size: 1rem;
-  color: var(--text-color);
+  /* color: var(--text-color); */
+  display: flex;
 }
 
 .toggle-link {
   color: var(--accent-color);
   cursor: pointer;
   text-decoration: underline;
+}
+
+.user-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 :deep(.modal-btn) {
@@ -234,9 +377,295 @@ async function saveSettings() {
   margin-right: var(--spacing-sm);
 }
 
+.user-info {
+  display: flex;
+  /* flex-direction: column; */
+  gap: 2px;
+}
+
+.donations-info {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.dark .donations-info {
+  color: var(--dark-text-secondary);
+}
+
+.auth-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.app-intro {
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+.intro-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--spacing-md);
+}
+
+.intro-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.intro-text {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.feature-icon {
+  color: var(--primary-color);
+  font-size: 1.2rem;
+}
+
+.auth-forms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.auth-switch-text {
+  text-align: center;
+  margin: var(--spacing-sm) 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Dark mode styles */
+.dark .intro-title {
+  color: var(--dark-primary-color);
+}
+
+.dark .intro-text {
+  color: var(--dark-text-secondary);
+}
+
+.dark .feature-item {
+  color: var(--dark-text-color);
+}
+
+.dark .feature-icon {
+  color: var(--dark-primary-color);
+}
+
+.dark .auth-switch-text {
+  color: var(--dark-text-secondary);
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
   .desktop-only {
     display: none;
+  }
+
+  .feature-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.user-profile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.profile-section {
+  padding: var(--spacing-md);
+  background: var(--surface-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.dark .profile-section {
+  background: var(--dark-surface-color);
+  border-color: var(--dark-border-color);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.profile-icon {
+  font-size: 2.5rem;
+  color: var(--primary-color);
+  background: var(--background-color);
+  padding: var(--spacing-sm);
+  border-radius: 50%;
+}
+
+.dark .profile-icon {
+  color: var(--dark-primary-color);
+  background: var(--dark-background-color);
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-info h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+.dark .profile-info h3 {
+  color: var(--dark-text-color);
+}
+
+.member-status {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.dark .member-status {
+  color: var(--dark-text-secondary);
+}
+
+.section-icon {
+  margin-right: var(--spacing-sm);
+  color: var(--primary-color);
+}
+
+.dark .section-icon {
+  color: var(--dark-primary-color);
+}
+
+.donations-section h4,
+.actions-section h4 {
+  margin: 0 0 var(--spacing-md);
+  font-size: 1rem;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+}
+
+.dark .donations-section h4,
+.dark .actions-section h4 {
+  color: var(--dark-text-color);
+}
+
+.donations-content {
+  min-height: 100px;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+  height: 100px;
+}
+
+.dark .loading-state {
+  color: var(--dark-text-secondary);
+}
+
+.donation-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--spacing-sm);
+  background: var(--background-color);
+  border-radius: var(--radius-sm);
+}
+
+.dark .stat-item {
+  background: var(--dark-background-color);
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.dark .stat-label {
+  color: var(--dark-text-secondary);
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.dark .stat-value {
+  color: var(--dark-primary-color);
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  height: 100px;
+  margin: 0;
+}
+
+.dark .empty-state {
+  color: var(--dark-text-secondary);
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.action-button {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .donation-stats {
+    grid-template-columns: 1fr;
   }
 }
 </style>

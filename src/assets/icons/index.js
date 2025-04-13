@@ -41,6 +41,10 @@ import {
   faShoppingCart,
   faUnlock,
   faStar,
+  faGamepad,
+  faChartLine,
+  faBookMedical,
+  faInfoCircle,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -86,4 +90,8 @@ library.add(
   faShoppingCart,
   faUnlock,
   faStar,
+  faGamepad,
+  faChartLine,
+  faBookMedical,
+  faInfoCircle,
 )

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyAuth } = require('../middleware/auth');
 const { createOneTimePayment, getPayment } = require('../services/mercadopago');
-const { storePayment, getUserPayments } = require('../services/firebase');
+const { storePayment, getUserPayments, getUserApprovedPayments } = require('../services/firebase');
 
 // Create payment endpoint
 router.post('/create-payment', verifyAuth, async (req, res) => {
@@ -86,6 +86,18 @@ router.get('/payment-status/:paymentId', verifyAuth, async (req, res) => {
   } catch (error) {
     console.error('[Payment Route] Error fetching payment status:', error);
     res.status(500).json({ error: 'Failed to fetch payment status' });
+  }
+});
+
+// Get user's donations history
+router.get('/donations', verifyAuth, async (req, res) => {
+  try {
+    const userId = req.user.uid;
+    const donations = await getUserApprovedPayments(userId);
+    res.json(donations);
+  } catch (error) {
+    console.error('[Payment Route] Error fetching donations:', error);
+    res.status(500).json({ error: 'Failed to fetch donations history' });
   }
 });
 
