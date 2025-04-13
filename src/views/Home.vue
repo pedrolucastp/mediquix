@@ -1,8 +1,8 @@
 <template>
   <div class="home-container" :class="{ dark: isDarkMode }">
     <header class="home-header">
-      <h1>Bem-vindo ao MediQuix</h1>
-      <p class="tagline">Deixe o mediquês sempre na ponta da língua!</p>
+      <h1>MediQuix</h1>
+      <p class="tagline">Mediquês na ponta da língua</p>
       <!-- <p>Jogos interativos para aprimorar seu conhecimento médico</p> -->
     </header>
     <div class="game-carousel">
@@ -39,8 +39,8 @@ const games = [
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  width: 100vw;
+  /* height: 100vh; */
+  /* width: 100vw; */
   /* background: linear-gradient(135deg, #4facfe, #00f2fe); */
   background: lightgoldenrodyellow;
   color: var(--text-color);
@@ -131,6 +131,11 @@ const games = [
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
   border-width: 3px;
 }
+
+.highlight p {
+  color: #fff;
+}
+
 .tagline {
   font-size: 1.2rem;
   font-style: italic;

@@ -1,15 +1,15 @@
 <template>
   <header :class="{ dark: isDarkMode }">
-    <div class="header-left">
+    <!-- <div class="header-left"> -->
+      <AuthControls />
       <router-link to="/" class="logo">
         <img src="@/assets/logo.svg" alt="Logo" width="30" height="30" />
         <h1 class="desktop-only">MediQuix</h1>
       </router-link>
-    </div>
-    <div class="header-right">
-      <AuthControls />
+    <!-- </div> -->
+    <!-- <div class="header-right"> -->
       <DarkModeToggle />
-    </div>
+    <!-- </div> -->
   </header>
 </template>
 
