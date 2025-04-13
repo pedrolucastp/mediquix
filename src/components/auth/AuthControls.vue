@@ -17,14 +17,22 @@
           title="Usuário Premium" 
         />
         <p class="user-email">{{ authStore.user?.email }}</p>
+        <BaseButton @click="showShopModal = true" variant="primary" icon="heart">
+          Apoiar
+        </BaseButton>
         <BaseButton @click="showSettingsModal = true" variant="secondary" icon="cog">
-          Settings
+          Meu Usuário
         </BaseButton>
         <BaseButton @click="handleLogout" variant="secondary" icon="sign-out-alt">
           Logout
         </BaseButton>
       </div>
     </template>
+
+    <!-- Shop Modal -->
+    <BaseModal v-model="showShopModal" title="Apoie o MediQuix">
+      <ShopComponent />
+    </BaseModal>
 
     <!-- Auth Modal -->
     <BaseModal v-model="showAuthModal" :title="isSignup ? 'Cadastro' : 'Login'">
@@ -128,6 +136,7 @@ import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseSelect from '@/components/base/BaseSelect.vue';
 import BaseModal from '@/components/base/BaseModal.vue';
+import ShopComponent from '@/components/ShopComponent.vue';
 
 const authStore = useAuthStore();
 const uiStore = useUIStore();
@@ -149,6 +158,9 @@ const settings = ref({
   default_speciality: -1,
 });
 const isSaving = ref(false);
+
+// Shop state
+const showShopModal = ref(false);
 
 // Convert specialties array to options format
 const specialtyOptions = computed(() => [

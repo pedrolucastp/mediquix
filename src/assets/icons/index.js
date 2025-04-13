@@ -38,6 +38,9 @@ import {
   faCopy,
   faClock,
   faExclamationCircle,
+  faShoppingCart,
+  faUnlock,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -80,4 +83,7 @@ library.add(
   faCopy,
   faClock,
   faExclamationCircle,
+  faShoppingCart,
+  faUnlock,
+  faStar,
 )

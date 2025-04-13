@@ -19,27 +19,24 @@ async function verifyAuth(req, res, next) {
 
 async function verifyWebhookSignature(req, res, next) {
   try {
-    const { Webhook } = require('mercadopago');
-    const { client } = require('../services/mercadopago');
+    // MercadoPago v2 doesn't have a built-in webhook verification
+    // We'll verify the webhook by checking if we can fetch the payment
+    const { getPayment } = require('../services/mercadopago');
     
-    const signature = req.headers['x-signature'];
-    const timestamp = req.headers['x-timestamp'];
-    const webhookClient = new Webhook(client);
-    
-    const isValid = await webhookClient.validate({
-      signature,
-      timestamp,
-      data: JSON.stringify(req.body)
-    });
+    if (!req.query['data.id']) {
+      return res.status(401).json({ error: 'Missing payment ID' });
+    }
 
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid webhook signature' });
+    // Verify the payment exists in MercadoPago
+    const payment = await getPayment(req.query['data.id']);
+    if (!payment || !payment.id) {
+      return res.status(401).json({ error: 'Invalid payment data' });
     }
     
     next();
   } catch (error) {
     console.error('Webhook signature verification error:', error);
-    res.status(401).json({ error: 'Webhook signature verification failed' });
+    res.status(401).json({ error: 'Webhook verification failed' });
   }
 }
 

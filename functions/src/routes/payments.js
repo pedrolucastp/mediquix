@@ -7,19 +7,33 @@ const { storePayment, getUserPayments } = require('../services/firebase');
 // Create payment endpoint
 router.post('/create-payment', verifyAuth, async (req, res) => {
   try {
-    console.log('[Payment Route] Starting PIX payment creation');
+    console.log('[Payment Route] Starting payment creation');
     
     const { amount, productId } = req.body;
     const userId = req.user.uid;
     const email = req.user.email;
+
+    // First create a pending payment in our database
+    const pendingPayment = await storePayment({
+      userId,
+      amount,
+      status: 'pending',
+      productId,
+      paymentMethod: 'pix',
+      createdAt: new Date()
+    });
     
+    console.log('[Payment Route] Pending payment stored, creating MercadoPago payment');
+
+    // Then create the payment in MercadoPago
     const paymentData = await createOneTimePayment({
       amount,
       email,
       userId,
       productId
     });
-    
+
+    // Update our payment with MercadoPago details
     await storePayment({
       paymentId: paymentData.id,
       userId,
@@ -27,10 +41,11 @@ router.post('/create-payment', verifyAuth, async (req, res) => {
       status: paymentData.status,
       productId,
       paymentMethod: 'pix',
-      pixInfo: paymentData.point_of_interaction?.transaction_data
+      pixInfo: paymentData.point_of_interaction?.transaction_data,
+      mercadoPagoResponse: paymentData
     });
 
-    console.log('[Payment Route] Payment stored in database');
+    console.log('[Payment Route] Payment updated with MercadoPago details');
     
     res.json({
       id: paymentData.id,

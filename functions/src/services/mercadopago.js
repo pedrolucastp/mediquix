@@ -40,12 +40,8 @@ async function createOneTimePayment({ amount, email, userId, productId }) {
         payment_method_id: 'pix',
         payer: {
           email,
-          first_name: 'Mediquix',
-          last_name: 'Game',
-          identification: {
-            type: 'CPF',
-            number: '12769140752'
-          }
+          // Remove identification requirement since we're using PIX
+          // PIX works with just the email for payer identification
         },
         metadata: { 
           userId, 

@@ -14,7 +14,7 @@ export const usePaymentsStore = defineStore('payments', () => {
   const pollingInterval = ref(null);
 
   // Premium product configuration
-  const PREMIUM_PRICE = 19.90; // Price in BRL
+  const PREMIUM_PRICE = 1.99; // Price in BRL
   const POLLING_INTERVAL_MS = 3000; // Check payment status every 3 seconds
 
   async function purchasePremium() {

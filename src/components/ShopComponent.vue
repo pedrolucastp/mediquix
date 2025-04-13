@@ -2,9 +2,28 @@
   <div class="shop-container">
     <div class="products-grid">
       <div class="product-card">
-        <h2>Premium Access</h2>
-        <p>Acesse todo o conteúdo premium do MediQuix</p>
-        <div class="price">R$ {{ (PREMIUM_PRICE).toFixed(2) }}</div>
+        <h2>Apoie o MediQuix</h2>
+        <div class="supporter-perks">
+          <h3>Benefícios do Apoiador:</h3>
+          <ul>
+            <li>
+              <font-awesome-icon icon="unlock" class="perk-icon" />
+              Acesso ilimitado a todos os jogos
+            </li>
+            <li>
+              <font-awesome-icon icon="star" class="perk-icon" />
+              Conteúdo exclusivo e especialidades extras
+            </li>
+            <li>
+              <font-awesome-icon icon="heart" class="perk-icon" />
+              Ajude a manter o projeto vivo e crescendo
+            </li>
+          </ul>
+        </div>
+        <div class="price-container">
+          <div class="price">R$ {{ (PREMIUM_PRICE).toFixed(2) }}</div>
+          <span class="price-period">contribuição única</span>
+        </div>
 
         <BaseButton
           variant="primary"
@@ -12,7 +31,7 @@
           :disabled="!isAuthenticated || isLoading"
           :loading="isLoading"
         >
-          {{ isAuthenticated ? 'Comprar Premium via PIX' : 'Faça login para comprar' }}
+          {{ isAuthenticated ? 'Apoiar via PIX' : 'Faça login para apoiar' }}
         </BaseButton>
       </div>
     </div>
@@ -93,7 +112,7 @@ const isLoading = ref(false);
 const pixModalVisible = ref(false);
 const pixData = ref(null);
 
-const PREMIUM_PRICE = 19.90;
+const PREMIUM_PRICE = 1.99;
 
 async function handlePurchase() {
   if (!isAuthenticated) return;
@@ -147,11 +166,50 @@ async function copyPixCode() {
   box-shadow: var(--shadow-sm);
 }
 
+.supporter-perks {
+  margin: var(--spacing-md) 0;
+  text-align: left;
+}
+
+.supporter-perks h3 {
+  font-size: 1.1em;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-color);
+}
+
+.supporter-perks ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.supporter-perks li {
+  padding: var(--spacing-sm) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.perk-icon {
+  color: var(--accent-color);
+}
+
+.price-container {
+  margin: var(--spacing-md) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .price {
   font-size: 2em;
   font-weight: bold;
   color: var(--accent-color);
-  margin: var(--spacing-md) 0;
+}
+
+.price-period {
+  font-size: 0.9em;
+  color: var(--text-muted);
 }
 
 .pix-container {

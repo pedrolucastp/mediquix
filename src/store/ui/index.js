@@ -36,6 +36,23 @@ export const useUIStore = defineStore('ui', () => {
     return loadingStates.value.get(key) || false;
   }
 
+  // Success states
+  const successMessages = ref(new Map());
+
+  function setSuccess(key, message) {
+    successMessages.value.set(key, message);
+    // Auto-clear success message after 5 seconds
+    setTimeout(() => clearSuccess(key), 5000);
+  }
+
+  function clearSuccess(key) {
+    successMessages.value.delete(key);
+  }
+
+  function getSuccess(key) {
+    return successMessages.value.get(key);
+  }
+
   // Error states
   const errors = ref(new Map());
 
@@ -64,6 +81,11 @@ export const useUIStore = defineStore('ui', () => {
     // Loading states
     setLoading,
     isLoading,
+
+    // Success states
+    setSuccess,
+    clearSuccess,
+    getSuccess,
 
     // Error states
     setError,
