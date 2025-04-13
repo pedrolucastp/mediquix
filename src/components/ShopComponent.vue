@@ -90,11 +90,36 @@
         </template>
       </div>
     </BaseModal>
+
+    <!-- Success Modal -->
+    <BaseModal v-model="successModalVisible" title="Pagamento Aprovado!">
+      <div class="success-container">
+        <font-awesome-icon icon="check-circle" size="3x" class="success-icon" />
+        <h3>Parabéns! Você agora é um Apoiador Premium!</h3>
+        <p>Seu pagamento foi confirmado e seu acesso Premium já está ativo.</p>
+        <div class="premium-benefits">
+          <h4>Seus benefícios:</h4>
+          <ul>
+            <li>
+              <font-awesome-icon icon="unlock" class="benefit-icon" />
+              Acesso ilimitado a todos os jogos
+            </li>
+            <li>
+              <font-awesome-icon icon="star" class="benefit-icon" />
+              Conteúdo exclusivo e especialidades extras
+            </li>
+          </ul>
+        </div>
+        <BaseButton @click="closeSuccessModal" variant="primary" icon="crown">
+          Começar a Usar
+        </BaseButton>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, watch } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { usePaymentsStore } from '@/store/payments';
 import { useUIStore } from '@/store/ui';
@@ -107,19 +132,30 @@ const uiStore = useUIStore();
 
 const { isAuthenticated } = authStore;
 const isLoading = ref(false);
-
-// PIX state
 const pixModalVisible = ref(false);
+const successModalVisible = ref(false);
 const pixData = ref(null);
 
 const PREMIUM_PRICE = 1.99;
+
+// Watch for premium status changes
+watch(
+  () => authStore.isPremium,
+  (isPremium) => {
+    if (isPremium) {
+      // Show success modal and hide PIX modal when payment is confirmed
+      pixModalVisible.value = false;
+      successModalVisible.value = true;
+      uiStore.setSuccess('Pagamento aprovado! Seu acesso Premium foi ativado.');
+    }
+  }
+);
 
 async function handlePurchase() {
   if (!isAuthenticated) return;
 
   try {
     isLoading.value = true;
-    // Open modal immediately
     pixModalVisible.value = true;
     
     const payment = await paymentsStore.purchasePremium();
@@ -133,9 +169,13 @@ async function handlePurchase() {
   }
 }
 
+function closeSuccessModal() {
+  successModalVisible.value = false;
+  // router.push('/premium-success');
+}
+
 function closePixModal() {
   pixModalVisible.value = false;
-  paymentsStore.stopPolling();
   pixData.value = null;
 }
 
@@ -277,5 +317,46 @@ async function copyPixCode() {
   gap: var(--spacing-md);
   justify-content: center;
   margin-top: var(--spacing-md);
+}
+
+.success-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.success-icon {
+  color: var(--success-color);
+  margin-bottom: var(--spacing-md);
+}
+
+.premium-benefits {
+  margin: var(--spacing-lg) 0;
+  text-align: left;
+  width: 100%;
+}
+
+.premium-benefits h4 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-color);
+}
+
+.premium-benefits ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.premium-benefits li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+}
+
+.benefit-icon {
+  color: var(--accent-color);
 }
 </style>

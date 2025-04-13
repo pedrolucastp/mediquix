@@ -12,10 +12,12 @@ export const usePaymentsStore = defineStore('payments', () => {
   const loading = ref(false);
   const error = ref(null);
   const pollingInterval = ref(null);
+  const pollingStartTime = ref(null);
 
   // Premium product configuration
   const PREMIUM_PRICE = 1.99; // Price in BRL
-  const POLLING_INTERVAL_MS = 3000; // Check payment status every 3 seconds
+  const POLLING_INTERVAL_MS = 5000; // Check payment status every 5 seconds
+  const MAX_POLLING_DURATION_MS = 5 * 60 * 1000; // Stop polling after 15 minutes
 
   async function purchasePremium() {
     try {
@@ -40,6 +42,13 @@ export const usePaymentsStore = defineStore('payments', () => {
 
   async function checkPaymentStatus(paymentId) {
     try {
+      // Check if we've exceeded max polling duration
+      if (pollingStartTime.value && Date.now() - pollingStartTime.value > MAX_POLLING_DURATION_MS) {
+        stopPolling();
+        uiStore.setError('payment', 'O tempo limite para confirmação do pagamento foi excedido. Por favor, tente novamente.');
+        return false;
+      }
+
       const status = await getPaymentStatus(paymentId);
       
       if (status.status === 'approved') {
@@ -63,11 +72,9 @@ export const usePaymentsStore = defineStore('payments', () => {
   }
 
   function startPolling(paymentId) {
-    if (pollingInterval.value) {
-      clearInterval(pollingInterval.value);
-      pollingInterval.value = null;
-    }
-    
+    stopPolling(); // Clear any existing polling
+
+    pollingStartTime.value = Date.now();
     pollingInterval.value = setInterval(async () => {
       try {
         await checkPaymentStatus(paymentId);
@@ -82,6 +89,7 @@ export const usePaymentsStore = defineStore('payments', () => {
       clearInterval(pollingInterval.value);
       pollingInterval.value = null;
     }
+    pollingStartTime.value = null;
   }
 
   async function loadPurchaseHistory() {

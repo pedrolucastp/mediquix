@@ -4,10 +4,37 @@ const { verifyWebhookSignature } = require('../middleware/auth');
 const { getPayment } = require('../services/mercadopago');
 const { updatePaymentStatus, updateUserPremiumStatus, getPaymentById } = require('../services/firebase');
 
+// Simple in-memory cache for webhook processing
+const processedWebhooks = new Map();
+const WEBHOOK_CACHE_TTL = 60 * 1000; // 1 minute TTL
+
+// Clear old entries from the webhook cache periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of processedWebhooks.entries()) {
+    if (now - timestamp > WEBHOOK_CACHE_TTL) {
+      processedWebhooks.delete(key);
+    }
+  }
+}, WEBHOOK_CACHE_TTL);
+
 // Payment webhook handler
 router.post('/payments', verifyWebhookSignature, async (req, res) => {
   try {
     const { action, data } = req.body;
+    
+    // Create a unique key for this webhook
+    const webhookKey = `${data.id}-${action}-${Date.now()}`;
+    
+    // Check if we've recently processed this webhook
+    if (processedWebhooks.has(webhookKey)) {
+      console.log('[Webhook] Skipping duplicate webhook:', { action, data });
+      return res.sendStatus(200);
+    }
+    
+    // Mark this webhook as being processed
+    processedWebhooks.set(webhookKey, Date.now());
+
     console.log('[Webhook] Received webhook:', { action, data });
     
     if (!data.id) {
@@ -30,6 +57,8 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
     try {
       const baseUpdateData = {
         userId,
+        productId: paymentData.metadata?.product_id,
+        amount: paymentData.transaction_amount,
         mercadoPagoResponse: paymentData
       };
 
