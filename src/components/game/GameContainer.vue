@@ -3,7 +3,7 @@
     <h1>{{ title }}</h1>
     
     <SelectorsComponent
-      v-if="showSelectors"
+      v-if="showSelectorsContent"
       @specialty-change="handleSpecialtyChange"
       @difficulty-change="handleDifficultyChange"
     />
@@ -17,7 +17,7 @@
       <p>Loading...</p>
     </div>
 
-    <div v-else class="game-content">
+    <div v-else-if="hasGameContent" class="game-content">
       <slot />
     </div>
 
@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, shallowRef, watch } from 'vue';
 import { useUIStore } from '@/store/ui';
 import SelectorsComponent from '@/components/SelectorsComponent.vue';
 
@@ -58,7 +58,20 @@ const props = defineProps({
 const emit = defineEmits(['specialty-change', 'difficulty-change']);
 
 const uiStore = useUIStore();
-const isDarkMode = computed(() => uiStore.isDarkMode);
+// Cache dark mode state with shallowRef for better performance
+const isDarkMode = shallowRef(uiStore.isDarkMode);
+
+// Watch for dark mode changes efficiently
+watch(() => uiStore.isDarkMode, (newValue) => {
+  isDarkMode.value = newValue;
+}, { flush: 'post' });
+
+// Renderless slot for game content for better performance
+const slots = defineSlots();
+const hasGameContent = computed(() => !!slots.default);
+
+// Cached selectors state
+const showSelectorsContent = computed(() => props.showSelectors && !props.error && !props.loading);
 
 function handleSpecialtyChange(value) {
   emit('specialty-change', value);

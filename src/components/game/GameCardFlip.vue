@@ -1,10 +1,11 @@
 <template>
   <div
     class="card"
-    :class="{ flipped, matched, dark: isDarkMode }"
+    :class="cardClasses"
+    :style="cardStyles"
     @click="!disabled && emit('click')"
   >
-    <div class="card-inner">
+    <div class="card-inner" :style="innerStyles">
       <div class="card-front">
         <slot name="front">
           <font-awesome-icon :icon="['fas', 'question']" size="2x" />
@@ -18,7 +19,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, shallowRef, watch } from 'vue';
 import { useUIStore } from '@/store/ui';
 
 const props = defineProps({
@@ -38,8 +39,39 @@ const props = defineProps({
 
 const emit = defineEmits(['click']);
 
+// Use shallowRef for better performance on frequently changing props
+const flippedState = shallowRef(props.flipped);
+const matchedState = shallowRef(props.matched);
+
+// Cache dark mode state
 const uiStore = useUIStore();
-const isDarkMode = computed(() => uiStore.isDarkMode);
+const isDarkMode = shallowRef(uiStore.isDarkMode);
+
+// Watch props efficiently
+watch(() => props.flipped, (newVal) => {
+  flippedState.value = newVal;
+}, { flush: 'post' });
+
+watch(() => props.matched, (newVal) => {
+  matchedState.value = newVal;
+}, { flush: 'post' });
+
+// Cache class computation
+const cardClasses = computed(() => ({
+  flipped: flippedState.value,
+  matched: matchedState.value,
+  dark: isDarkMode.value
+}));
+
+// Cache style computation for transforms
+const cardStyles = computed(() => ({
+  transform: matchedState.value ? 'scale(0.95)' : undefined,
+  willChange: flippedState.value ? 'transform' : undefined
+}));
+
+const innerStyles = computed(() => ({
+  transform: flippedState.value ? 'rotateY(180deg)' : undefined
+}));
 </script>
 
 <style scoped>
@@ -60,14 +92,6 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   height: 100%;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
-}
-
-.card.flipped .card-inner {
-  transform: rotateY(180deg);
-}
-
-.card.matched .card-inner {
-  transform: rotateY(180deg) scale(0.95);
 }
 
 .card-front,
