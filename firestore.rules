@@ -29,7 +29,7 @@ service cloud.firestore {
 
     // Validate complete user document
     function validateUser(data) {
-      return data.keys().hasAll(['username', 'email', 'custom_vocabulary', 'default_difficulty', 'default_speciality', 'isPremium', 'premiumActivatedAt'])
+      return data.keys().hasAll(['username', 'email', 'custom_vocabulary', 'default_difficulty', 'default_speciality', 'isPremium', 'premiumActivatedAt', 'points', 'freePoints', 'lastFreePointsUpdate'])
         && isValidString(data.username, 3, 30)
         && isValidString(data.email, 5, 100)
         && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
@@ -40,6 +40,11 @@ service cloud.firestore {
         && data.custom_vocabulary is list
         && data.custom_vocabulary.size() <= 1500
         && data.isPremium is bool
+        && data.points is number
+        && data.points >= 0
+        && data.freePoints is number
+        && data.freePoints >= 0
+        && (data.lastFreePointsUpdate == null || data.lastFreePointsUpdate is timestamp)
         && (data.premiumActivatedAt == null || data.premiumActivatedAt is timestamp);
     }
 

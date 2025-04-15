@@ -1,28 +1,13 @@
 <template>
   <div class="word-search-game">
+    <h1>Caça-Palavras</h1>
+    <SelectorsComponent @specialty-change="createGame" @difficulty-change="createGame" />
 
+    <GamePerksMenu :availablePerks="['hint']" @perk-activated="handlePerk" />
 
     <div class="game-container">
+      <!-- Word list moved before grid for better mobile flow -->
       <div class="word-search-game-panel">
-        <h1>Caça Palavras</h1>
-
-        <SelectorsComponent @specialty-change="createGame" @difficulty-change="createGame" />
-
-        <div class="grid-controls">
-          <div class="control-group">
-            <label>Largura: {{ gridWidth }}</label>
-            <input type="range" :value="gridWidth" min="5" max="40" @input="handleGridWidthChange" />
-          </div>
-          <div class="control-group">
-            <label>Altura: {{ gridHeight }}</label>
-            <input type="range" :value="gridHeight" min="8" max="20" @input="handleGridHeightChange" />
-          </div>
-          <div class="control-group">
-            <label>Tamanho da célula: {{ cellSize }}</label>
-            <input type="range" :value="cellSize" min="20" max="40" step="2" @input="handleCellSizeChange" />
-          </div>
-        </div>
-
         <ul class="word-list">
           <li v-for="wordObj in gameWords" :key="wordObj.word" :title="wordObj.word"
             :class="{ found: foundWords.includes(wordObj.word.toUpperCase()) }">
@@ -31,24 +16,44 @@
         </ul>
 
       </div>
-      
+
       <div class="game-grid-container">
+
         <div class="game-grid" ref="gameGrid" :style="gridStyle">
           <div v-for="(row, rowIndex) in grid" :key="rowIndex" class="grid-row">
             <div v-for="(cell, colIndex) in row" :key="colIndex" class="cell" :class="{
               selected: isCellSelected(rowIndex, colIndex),
               found: isCellFound(rowIndex, colIndex),
-            }" @click="handleCellClick(rowIndex, colIndex)">
+            }" @click="handleCellClick(rowIndex, colIndex)" :data-row="rowIndex" :data-col="colIndex">
               {{ cell }}
             </div>
           </div>
         </div>
       </div>
-
-     
+      
     </div>
-
+    <div class="grid-controls">
+        <div class="control-group">
+          <label>Altura da grade: {{ gridWidth }}</label>
+          <input type="range" :value="gridWidth" min="10" max="40" step="1" @input="handleGridWidthChange" />
+        </div>
+        <div class="control-group">
+          <label>Largura da grade: {{ gridHeight }}</label>
+          <input type="range" :value="gridHeight" min="8" max="20" step="1" @input="handleGridHeightChange" />
+        </div>
+        <div class="control-group">
+          <label>Tamanho da célula: {{ cellSize }}</label>
+          <input type="range" :value="cellSize" min="16" max="40" step="2" @input="handleCellSizeChange" />
+        </div>
+      </div>
     <p class="status">{{ statusMessage }}</p>
+
+    <div v-if="allWordsFound" class="completion-message">
+      <h3>Parabéns!</h3>
+      <p>Você encontrou todas as palavras!</p>
+      <p>Pontos ganhos: {{ pointsEarned }}</p>
+      <BaseButton variant="primary" @click="createGame">Novo Jogo</BaseButton>
+    </div>
   </div>
 </template>
 
@@ -57,22 +62,27 @@ import { ref, reactive, onMounted, computed } from "vue";
 import { useVocabularyStore } from "@/store/vocabulary";
 import { useSettingsStore } from "@/store/settings";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
+import { useGamePoints } from '@/composables/useGamePoints';
+import GamePerksMenu from '../components/game/GamePerksMenu.vue';
+import BaseButton from '@/components/base/BaseButton.vue';
 
 const settingsStore = useSettingsStore();
 const vocabularyStore = useVocabularyStore();
 
-// Use settings from the store
 const cellSize = computed(() => settingsStore.settings.wordSearchGame.cellSize);
 const gridWidth = computed(() => settingsStore.settings.wordSearchGame.gridWidth);
 const gridHeight = computed(() => settingsStore.settings.wordSearchGame.gridHeight);
 
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${gridWidth.value}, ${cellSize.value}px)`,
-  gridTemplateRows: `repeat(${gridHeight.value}, ${cellSize.value}px)`,
+  display: 'grid',
+  gridTemplateColumns: `repeat(${gridHeight.value}, ${cellSize.value}px)`,
+  gridTemplateRows: `repeat(${gridWidth.value}, ${cellSize.value}px)`,
+  // gap: '1px', no gap needed
   "--cell-size": `${cellSize.value}px`,
+  width: 'fit-content',
+  minWidth: 'min-content'
 }));
 
-// Grid size control handlers
 function handleGridWidthChange(e) {
   const width = parseInt(e.target.value);
   if (width >= 10 && width <= 40) {
@@ -90,8 +100,9 @@ function handleGridHeightChange(e) {
 }
 
 function handleCellSizeChange(e) {
+  console.log('handleCellSizeChange', e)
   const size = parseInt(e.target.value);
-  if (size >= 20 && size <= 40) {
+  if (size >= 16 && size <= 40) {
     settingsStore.setWordSearchGridSize(gridWidth.value, gridHeight.value, size);
   }
 }
@@ -103,6 +114,14 @@ const foundWords = ref([]);
 const score = ref(0);
 const statusMessage = ref("");
 const selectedCells = ref([]);
+const pointsEarned = ref(0);
+
+const { POINTS_CONFIG, awardPoints } = useGamePoints();
+
+const allWordsFound = computed(() => {
+  return gameWords.value.length > 0 &&
+    gameWords.value.every(word => foundWords.value.includes(word.word.toUpperCase()));
+});
 
 function createGame() {
   score.value = 0;
@@ -110,6 +129,12 @@ function createGame() {
   selectedCells.value = [];
   foundWords.value = [];
   foundCells = reactive({});
+
+  // Initialize grid with correct dimensions
+  const rows = parseInt(gridHeight.value);
+  const cols = parseInt(gridWidth.value);
+
+  grid.value = Array(rows).fill().map(() => Array(cols).fill(""));
 
   let filteredWords = vocabularyStore.words.filter(
     (wordObj) => wordObj.isActive
@@ -137,25 +162,17 @@ function createGame() {
     return;
   }
 
-  // Initialize grid with empty strings
-  grid.value = Array.from({ length: gridHeight.value }, () =>
-    Array(gridWidth.value).fill("")
-  );
-
-  // Select and shuffle words
   uniqueWords.sort(() => 0.5 - Math.random());
   const selectedUnique = uniqueWords.slice(0, 10);
   gameWords.value = selectedUnique.map((word) =>
     filteredWords.find((wordObj) => wordObj.word.toUpperCase() === word)
   );
 
-  // Place words and fill empty cells
   let allWordsPlaced = gameWords.value.every((wordObj) => {
     return placeWordInGrid(wordObj.word.toUpperCase());
   });
 
   if (!allWordsPlaced) {
-    // If not all words could be placed, try again
     createGame();
     return;
   }
@@ -181,7 +198,6 @@ function placeWordInGrid(word) {
     return false;
   }
 
-  // Find all possible positions with their intersection scores
   const positions = [];
   for (const direction of possibleDirections) {
     const maxRow = gridHeight.value - (["vertical", "diagonal-down"].includes(direction) ? word.length : 0);
@@ -203,7 +219,6 @@ function placeWordInGrid(word) {
     }
   }
 
-  // Sort positions by intersection score and randomize equal scores
   positions.sort((a, b) => {
     if (b.intersections === a.intersections) {
       return Math.random() - 0.5;
@@ -211,7 +226,6 @@ function placeWordInGrid(word) {
     return b.intersections - a.intersections;
   });
 
-  // Try to place the word in the best position
   if (positions.length > 0) {
     const bestPos = positions[0];
     placeWordAtPosition(word, bestPos.row, bestPos.col, bestPos.direction);
@@ -288,6 +302,7 @@ function placeWordAtPosition(word, startRow, startCol, direction) {
 
 function fillEmptyCells() {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  // Fix loop order to properly fill all cells
   for (let row = 0; row < gridHeight.value; row++) {
     for (let col = 0; col < gridWidth.value; col++) {
       if (grid.value[row][col] === "") {
@@ -345,7 +360,6 @@ function checkSelectedWord() {
   const rowDiff = second.row - first.row;
   const colDiff = second.col - first.col;
 
-  // Check if selection is valid (straight line: horizontal, vertical, or diagonal)
   const isDiagonal = Math.abs(rowDiff) === Math.abs(colDiff);
   const isHorizontal = rowDiff === 0;
   const isVertical = colDiff === 0;
@@ -372,7 +386,6 @@ function checkSelectedWord() {
       cellsToCheck.push({ row: r, col: top.col });
     }
   } else {
-    // Diagonal case
     const steps = Math.abs(rowDiff);
     const rowStep = rowDiff / steps;
     const colStep = colDiff / steps;
@@ -385,7 +398,6 @@ function checkSelectedWord() {
     }
   }
 
-  // Rest of the function remains the same
   const upperWord = word.toUpperCase();
   const reversedWord = upperWord.split("").reverse().join("");
   const foundWordObj = gameWords.value.find(
@@ -406,6 +418,9 @@ function checkSelectedWord() {
     statusMessage.value = `Você encontrou: ${foundWordObj.word.toUpperCase()}`;
     resetSelection();
     if (foundWords.value.length === gameWords.value.length) {
+      const points = calculateGamePoints();
+      awardPoints(points);
+      pointsEarned.value = points;
       setTimeout(() => {
         alert(
           `Parabéns! Você encontrou todas as palavras com ${score.value} pontos.`
@@ -422,11 +437,89 @@ function checkSelectedWord() {
   }
 }
 
+function calculateGamePoints() {
+  const basePoints = gameWords.value.length * POINTS_CONFIG.WORD_FOUND;
+  const isPerfect = true;
+  return basePoints + POINTS_CONFIG.GAME_COMPLETION + (isPerfect ? POINTS_CONFIG.PERFECT_SCORE : 0);
+}
+
+function handlePerk(perkId) {
+  if (perkId === 'hint') {
+    const unfoundWords = gameWords.value
+      .filter(word => !foundWords.value.includes(word.word.toUpperCase()));
+
+    if (unfoundWords.length > 0) {
+      const randomWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
+      const cells = findWordCells(randomWord.word.toUpperCase());
+      cells.forEach(cell => {
+        const el = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+        if (el) {
+          el.classList.add('hint');
+          setTimeout(() => el.classList.remove('hint'), 1000);
+        }
+      });
+    }
+  }
+}
+
+function findWordCells(word) {
+  const cells = [];
+  const directions = ["horizontal", "vertical", "diagonal-down", "diagonal-up"];
+  for (let row = 0; row < gridHeight.value; row++) {
+    for (let col = 0; col < gridWidth.value; col++) {
+      directions.forEach(dir => {
+        const positions = getWordPositions(word, row, col, dir);
+        if (positions.length === word.length) {
+          cells.push(...positions);
+        }
+      });
+    }
+  }
+  return cells;
+}
+
+function getWordPositions(word, startRow, startCol, direction) {
+  const positions = [];
+  for (let i = 0; i < word.length; i++) {
+    let row = startRow;
+    let col = startCol;
+
+    switch (direction) {
+      case "horizontal":
+        col += i;
+        break;
+      case "vertical":
+        row += i;
+        break;
+      case "diagonal-down":
+        row += i;
+        col += i;
+        break;
+      case "diagonal-up":
+        row -= i;
+        col += i;
+        break;
+    }
+
+    const currentCell = grid.value[row]?.[col];
+    if (currentCell === undefined || currentCell !== word[i]) {
+      return [];
+    }
+    positions.push({ row, col });
+  }
+  return positions;
+}
+
 function resetSelection() {
   selectedCells.value = [];
 }
 
 onMounted(() => {
+  console.log('onMounted',
+    cellSize,
+    gridWidth,
+    gridHeight
+  );
   createGame();
 });
 
@@ -437,32 +530,51 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
+  padding: 0.5rem;
   height: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.game-container {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  background-color: var(--surface-color);
+  box-shadow: var(--shadow-sm);
+  overflow: auto;
+  /* flex-wrap: wrap; */
 }
 
 .word-search-game-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  width: 30%;
 }
 
 .grid-controls {
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
+  /* flex-direction: column; */
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--background-color);
+  border-radius: var(--radius-md);
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
-  align-items: start;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  width: 100%;
 }
 
 .control-group input[type="range"] {
-  width: 200px;
+  width: 100%;
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
@@ -508,42 +620,32 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.game-container {
-  display: flex;
-  overflow-y: auto;
-  gap: 2rem;
-  width: 100%;
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  background-color: var(--surface-color);
-  box-shadow: var(--shadow-sm);
-}
-
 .game-grid-container {
   display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
+  /* justify-content: center; */
+  /* align-items: center; */
   overflow: auto;
   width: 100%;
-  max-width: 100%;
-  margin: auto;
-  padding: 10px;
+  /* padding: 0.5rem; */
+  /* max-width: 100vw; */
+  -webkit-overflow-scrolling: touch;
+  flex-wrap: wrap;
 }
 
 .game-grid {
   display: grid;
-}
-
-.grid-row {
-  display: flex;
-  display: contents;
+  /* gap: 1px; */
+  background-color: var(--border-color);
+  /* padding: 1px; */
+  border-radius: var(--radius-sm);
+  width: fit-content;
+  margin: 20px auto;
 }
 
 .cell {
   width: var(--cell-size);
   height: var(--cell-size);
   background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
   color: var(--text-color);
   display: flex;
   align-items: center;
@@ -551,8 +653,10 @@ onMounted(() => {
   cursor: pointer;
   user-select: none;
   position: relative;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-weight: 600;
+  font-size: calc(var(--cell-size) * 0.4);
+  touch-action: manipulation;
 }
 
 .cell:hover {
@@ -572,6 +676,23 @@ onMounted(() => {
   border-color: var(--success-color);
 }
 
+.cell.hint {
+  animation: hint-flash 1s ease;
+}
+
+@keyframes hint-flash {
+
+  0%,
+  100% {
+    background-color: var(--surface-color);
+  }
+
+  50% {
+    background-color: var(--accent-color);
+    color: white;
+  }
+}
+
 .status {
   margin-top: 1rem;
   font-size: 1rem;
@@ -583,24 +704,24 @@ onMounted(() => {
 
 .word-list {
   display: flex;
-  flex-direction: column;
+  /* flex-wrap: wrap; */
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 0.5rem;
   margin: 0;
-  background-color: var(--surface-color);
-  border-radius: var(--radius-md);
-  min-width: 250px;
+  list-style: none;
+  width: 100%;
+  flex-direction: column;
 }
 
 .word-list li {
-  font-size: 1rem;
+  flex: 1 1 calc(50% - 0.5rem);
+  min-width: 150px;
+  font-size: 0.9rem;
   color: var(--text-color);
   text-align: left;
-  list-style: none;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem;
   border-radius: var(--radius-sm);
   background-color: var(--background-color);
-  transition: all 0.2s ease;
   border: 1px solid var(--border-color);
 }
 
@@ -613,9 +734,17 @@ onMounted(() => {
 .word-list li.found {
   text-decoration: line-through;
   color: var(--accent-color);
-  background-color: var(--success-color);
-  background-opacity: 0.1;
+  background-color: rgba(var(--success-color-rgb), 0.1);
   border-color: var(--success-color);
+}
+
+.completion-message {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--surface-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
 }
 
 /* Dark mode support */
@@ -669,27 +798,53 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .word-search-game {
+    padding: 1rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .game-container {
     flex-direction: column;
-    padding: 0.5rem;
+    padding: 1rem;
+    overflow: visible;
+    overflow-x: clip;
+  }
+
+  .word-search-game-panel {
+    /* width: 300px; */
+    /* min-width: 300px; */
+    width: 100%;
+  }
+
+  .game-grid-container {
+    overflow: visible;
+
   }
 
   .word-list {
-    min-width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  .word-list li {
-    padding: 0.5rem;
-    font-size: 0.9rem;
+    flex-direction: column;
+    /* flex-wrap: nowrap; */
   }
 
   .cell {
-    font-size: 0.9rem;
+    font-size: calc(var(--cell-size) * 0.5);
+  }
+
+  .control-group label {
+    font-size: 0.8rem;
+  }
+
+  .word-list li {
+    flex: 1 1 100%;
+    min-width: 0;
+    font-size: 0.85rem;
+    padding: 0.4rem;
   }
 
   .status {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
   }
 }
 </style>

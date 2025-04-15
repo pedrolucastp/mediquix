@@ -3,6 +3,7 @@ const router = express.Router();
 const { verifyWebhookSignature } = require('../middleware/auth');
 const { getPayment } = require('../services/mercadopago');
 const { updatePaymentStatus, updateUserPremiumStatus, getPaymentById } = require('../services/firebase');
+const admin = require('firebase-admin'); // Added for Firestore operations
 
 // Simple in-memory cache for webhook processing
 const processedWebhooks = new Map();
@@ -77,15 +78,31 @@ router.post('/payments', verifyWebhookSignature, async (req, res) => {
           
           if (userId) {
             try {
-              console.log(`[Webhook] Attempting to activate premium for user ${userId}`);
-              await updateUserPremiumStatus(userId, true);
-              console.log(`[Webhook] Premium successfully activated for user ${userId}`);
+              // Check if this is a points purchase
+              if (paymentData.metadata?.product_id === 'points-purchase' && paymentData.metadata?.pointsAmount) {
+                console.log(`[Webhook] Processing points purchase for user ${userId}`);
+                const pointsAmount = Number(paymentData.metadata.pointsAmount);
+                
+                if (!isNaN(pointsAmount) && pointsAmount > 0) {
+                  const userRef = admin.firestore().collection('users').doc(userId);
+                  await userRef.update({
+                    points: admin.firestore.FieldValue.increment(pointsAmount)
+                  });
+                  console.log(`[Webhook] Added ${pointsAmount} points to user ${userId}`);
+                }
+              } else {
+                // Handle premium access purchase
+                console.log(`[Webhook] Attempting to activate premium for user ${userId}`);
+                await updateUserPremiumStatus(userId, true);
+                console.log(`[Webhook] Premium successfully activated for user ${userId}`);
+              }
             } catch (error) {
-              console.error('[Webhook] Failed to activate premium:', {
+              console.error('[Webhook] Failed to process purchase:', {
                 error: error.message,
                 stack: error.stack,
                 userId,
-                paymentId: data.id
+                paymentId: data.id,
+                productId: paymentData.metadata?.product_id
               });
             }
           } else {

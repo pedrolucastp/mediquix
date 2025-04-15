@@ -1,15 +1,10 @@
 <template>
-  <button
-    :class="[
-      'base-button',
-      variant,
-      { icon: !!icon, disabled: disabled, loading: loading },
-      { dark: isDarkMode }
-    ]"
-    :disabled="disabled || loading"
-    :type="type"
-    @click="$emit('click', $event)"
-  >
+  <button :class="[
+    'base-button',
+    variant,
+    { icon: !!icon, disabled: disabled, loading: loading },
+    { dark: isDarkMode }
+  ]" :disabled="disabled || loading" :type="type" @click="$emit('click', $event)">
     <font-awesome-icon v-if="icon" :icon="['fas', icon]" :size="iconSize" :class="{ 'fa-icon': loading }" />
     <span v-if="$slots.default" :class="{ 'with-icon': icon && !loading }">
       <slot />
@@ -117,6 +112,16 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   opacity: 0;
 }
 
+.base-button .with-icon {
+  color: inherit;
+}
+
+@media (max-width: 768px) {
+  .with-icon {
+    font-size: 0.8rem;
+  }
+}
+
 .base-button.loading .fa-icon {
   animation: spin 1s linear infinite;
 }
@@ -125,6 +130,7 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -167,7 +173,7 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 }
 
 .base-button.dark.outline {
-  background-color: transparent;
+  /* background-color: transparent; */
   border-color: var(--dark-border-color);
   color: var(--dark-text-color);
 }
@@ -175,6 +181,10 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 .base-button.dark.outline:hover:not(:disabled) {
   background-color: var(--dark-hover-color);
   border-color: var(--dark-primary-color);
+}
+
+.base-button.dark .with-icon {
+  color: var(--dark-text-color);
 }
 
 /* Toggle button styles */

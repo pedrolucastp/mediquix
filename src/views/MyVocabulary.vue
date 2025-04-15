@@ -1,10 +1,18 @@
 <template>
-  <div class="my-vocabulary">
+  <div class="my-vocabulary" :class="{ dark: isDarkMode }">
     <div class="vocab-header">
       <h1>Meu Vocabulário</h1>
-      <div class="vocab-controls">
+      <div class="search-word">
+        <BaseInput v-model="searchTerm" placeholder="Buscar palavra ou definição..." icon="search"
+          @keyup.enter="searchWords" />
+      </div>
+      <div class="mobile-controls-toggle" @click="toggleMobileControls">
+        <span>Controles</span>
+        <font-awesome-icon :icon="mobileControlsExpanded ? 'chevron-up' : 'chevron-down'" class="arrow"
+          :class="{ up: mobileControlsExpanded }" />
+      </div>
+      <div class="vocab-controls" :class="{ expanded: mobileControlsExpanded }">
         <div class="filters">
-          <SelectorsComponent />
           <div class="filter-buttons">
             <BaseButton variant="primary" icon="plus" @click="openAddWordModal">
               Adicionar
@@ -19,10 +27,6 @@
             </BaseButton>
           </div>
         </div>
-        <div class="search-word">
-          <BaseInput v-model="searchTerm" placeholder="Buscar palavra ou definição..." icon="search"
-            @keyup.enter="searchWords" />
-        </div>
         <div class="actions">
 
           <!-- <BaseButton 
@@ -35,7 +39,7 @@
           </BaseButton> -->
           <BaseButton variant="outline" icon="check-square" @click="toggleSelectionMode"
             :class="{ active: selectionMode }">
-            {{ selectionMode ? "Cancelar Seleção" : "Selecionar" }}
+            {{ selectionMode ? "Cancelar" : "Selecionar Itens" }}
           </BaseButton>
           <BaseButton variant="outline" icon="check" @click="selectAllWords" v-if="selectionMode">
             Selecionar Todos
@@ -44,6 +48,7 @@
             Desselecionar Todos
           </BaseButton>
         </div>
+        <SelectorsComponent />
       </div>
       <div class="results-info">
         <p class="results-count">{{ displayedWords.length }} termos encontrados</p>
@@ -222,11 +227,15 @@
         Excluir Selecionados
       </BaseButton>
     </div>
+
+    <button v-show="showScrollTop" @click="scrollToTop" class="scroll-top-button" title="Voltar ao topo">
+      <font-awesome-icon icon="arrow-up" />
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, onMounted, onUnmounted } from "vue";
 import { useVocabularyStore } from "@/store/vocabulary";
 import { useSettingsStore } from "@/store/settings";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
@@ -235,6 +244,10 @@ import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseSelect from '@/components/base/BaseSelect.vue';
 import BaseModal from '@/components/base/BaseModal.vue';
+import { useUIStore } from "@/store/ui";
+
+const uiStore = useUIStore();
+const isDarkMode = computed(() => uiStore.isDarkMode);
 
 const vocabularyStore = useVocabularyStore();
 const settingsStore = useSettingsStore();
@@ -253,6 +266,29 @@ const editData = reactive({});
 
 const isLoading = ref(false);
 const actionInProgress = ref('');
+
+const showScrollTop = ref(false);
+const mobileControlsExpanded = ref(false);
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
+
+function handleScroll() {
+  showScrollTop.value = window.scrollY > 300;
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleMobileControls() {
+  mobileControlsExpanded.value = !mobileControlsExpanded.value;
+}
 
 function normalize(str) {
   return str
@@ -667,16 +703,28 @@ function toggleEditSpecialty(index, specialtyIndex) {
   max-width: 900px;
   width: 100%;
   margin: 0 auto;
-  /* padding: var(--spacing-md); */
+  padding: var(--spacing-md);
   gap: var(--spacing-md);
+  background-color: var(--background-color);
+}
+
+.my-vocabulary.dark {
+  background-color: var(--dark-background-color);
 }
 
 .vocab-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-md);
-  position: relative;
+  position: sticky;
+  top: 0;
+  /* background-color: var(--background-color); */
+  padding: var(--spacing-md);
+  z-index: 99;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--spacing-lg);
+}
+
+:deep(.dark) .vocab-header {
+  background-color: var(--dark-background-color);
+  border-color: var(--dark-border-color);
 }
 
 .vocab-controls {
@@ -684,17 +732,50 @@ function toggleEditSpecialty(index, specialtyIndex) {
   flex-direction: column;
   gap: var(--spacing-md);
   width: 100%;
+  position: relative;
+}
+
+.mobile-controls-toggle {
+  display: none;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-color);
+  margin-bottom: var(--spacing-sm);
+}
+
+:deep(.dark) .mobile-controls-toggle {
+  color: var(--dark-text-color);
+}
+
+.mobile-controls-toggle .arrow {
+  transition: transform 0.3s ease;
+}
+
+.mobile-controls-toggle .arrow.up {
+  transform: rotate(180deg);
 }
 
 .filters {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .filter-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.filter-buttons button {
+  flex: 1;
+  min-width: 150px;
+  max-width: 250px;
 }
 
 .actions {
@@ -707,6 +788,7 @@ function toggleEditSpecialty(index, specialtyIndex) {
 
 .search-word {
   flex: 1;
+  margin-bottom: var(--spacing-md);
 }
 
 .results-info {
@@ -745,19 +827,21 @@ function toggleEditSpecialty(index, specialtyIndex) {
   gap: var(--spacing-md);
   overflow-y: auto;
   position: relative;
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + var(--spacing-xl));
   padding-top: 3px;
-  /* Make space for the batch actions bar */
 }
 
 .term-item {
   padding: var(--spacing-md);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  /* background-color: var(--surface-color); */
   transition: all 0.3s ease, height 0.3s ease, padding 0.3s ease;
   transform-origin: top;
   animation: slide-in 0.3s ease-out;
+  cursor: pointer;
+  background-color: var(--surface-color);
+  box-shadow: var(--shadow-sm);
+  opacity: 0.95;
 }
 
 @keyframes slide-in {
@@ -774,12 +858,16 @@ function toggleEditSpecialty(index, specialtyIndex) {
 
 .term-item:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+  background-color: var(--background-color);
 }
 
 .term-item.expanded {
-  /* background-color: var(--background-color); */
-  /* transform: scale(1.02); */
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  background-color: var(--background-color);
+  border-color: var(--primary-color);
 }
 
 .term-item.selected {
@@ -810,9 +898,7 @@ function toggleEditSpecialty(index, specialtyIndex) {
   transform: translateY(-2px);
 }
 
-.difficulty-badge {
-  /* background-color: var(--surface-color); */
-}
+.difficulty-badge {}
 
 .difficulty-1 {
   color: #2ecc71;
@@ -826,7 +912,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   color: #e74c3c;
 }
 
-/* Dark mode improvements */
 :deep(.dark) .difficulty-1 {
   color: #4ade80;
 }
@@ -890,9 +975,7 @@ function toggleEditSpecialty(index, specialtyIndex) {
   border: 1px solid var(--dark-border-color);
 }
 
-.active-badge {
-  /* background-color: var(--surface-color); */
-}
+.active-badge {}
 
 .active-badge.is-active {
   color: #2ecc71;
@@ -904,6 +987,11 @@ function toggleEditSpecialty(index, specialtyIndex) {
   flex-direction: column;
   gap: var(--spacing-md);
   animation: fade-in 0.3s ease-out;
+  position: relative;
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
 }
 
 @keyframes fade-in {
@@ -1001,7 +1089,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   font-size: 0.9rem;
   font-weight: 500;
   text-align: center;
-  /* color: var(--text-color); */
   transition: all 0.2s ease;
   min-height: 40px;
   display: flex;
@@ -1022,13 +1109,10 @@ function toggleEditSpecialty(index, specialtyIndex) {
   color: white;
 }
 
-/* Dark mode support */
 :deep(.dark) .specialty-button {
   background-color: var(--dark-surface-color);
   border-color: var(--dark-border-color);
   color: var(--text-color);
-  /* background-color: var(--surface-color); */
-
 }
 
 :deep(.dark) .specialty-button:hover {
@@ -1046,7 +1130,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   background-color: rgba(255, 99, 71, 0.1);
 }
 
-/* Loading overlay styles */
 .loading-overlay {
   position: fixed;
   top: 0;
@@ -1059,6 +1142,7 @@ function toggleEditSpecialty(index, specialtyIndex) {
   align-items: center;
   z-index: 1000;
   animation: fade-in 0.2s ease-out;
+  backdrop-filter: blur(2px);
 }
 
 .loading-content {
@@ -1069,6 +1153,22 @@ function toggleEditSpecialty(index, specialtyIndex) {
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  text-align: center;
+  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .loading-spinner {
@@ -1085,7 +1185,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   }
 }
 
-/* Dark mode support */
 :deep(.dark) .loading-content {
   background-color: var(--dark-surface-color);
   color: var(--dark-text-color);
@@ -1097,15 +1196,17 @@ function toggleEditSpecialty(index, specialtyIndex) {
   bottom: 0;
   left: 0;
   right: 0;
-  /* background-color: var(--surface-color); */
+  background-color: var(--surface-color);
   padding: var(--spacing-md);
   box-shadow: var(--shadow-lg);
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-md);
   z-index: 100;
   animation: slide-up 0.3s ease-out;
   border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 @keyframes slide-up {
@@ -1130,24 +1231,136 @@ function toggleEditSpecialty(index, specialtyIndex) {
   color: var(--text-secondary);
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
-  .vocab-controls {
-    flex-direction: column;
+  .my-vocabulary {
+    padding: var(--spacing-sm);
   }
 
-  .actions {
+  .vocab-header {
+    padding: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .vocab-controls {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    margin: 0;
+    opacity: 0;
+  }
+
+  .vocab-controls.expanded {
+    max-height: 1000px;
+    opacity: 1;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .mobile-controls-toggle {
+    display: flex;
+  }
+
+  .filters {
     flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .filter-buttons {
+    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    width: 100%;
+  }
+
+  .filter-buttons button {
+    min-width: unset;
+    max-width: unset;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.9rem;
+  }
+
+  .search-word {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .term-item {
+    padding: var(--spacing-sm);
   }
 
   .card-header {
     flex-direction: column;
-    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+
+  .card-header h2 {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .card-badges {
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+
+  .card-details {
+    padding: var(--spacing-sm);
     gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+  }
+
+  .clue {
+    font-size: 1rem;
+  }
+
+  .specialties-tags {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  .specialty-tag {
+    font-size: 0.8rem;
+    padding: 2px 6px;
+  }
+
+  .card-actions {
+    flex-wrap: wrap;
+  }
+
+  .edit-form {
+    gap: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
   }
 
   .specialties-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .specialty-button {
+    padding: var(--spacing-xs);
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+
+  .batch-actions-bar {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+    flex-direction: column;
+  }
+
+  .batch-actions-bar button {
+    width: 100%;
+  }
+
+  .selected-count {
+    text-align: center;
+    width: 100%;
+    justify-content: center;
+    padding: var(--spacing-xs) 0;
+    border-bottom: 1px solid var(--border-color);
   }
 }
 
@@ -1191,8 +1404,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   font-size: 0.9rem;
   font-weight: 500;
   text-align: center;
-  /* background-color: var(--surface-color); */
-  /* color: var(--text-color); */
   transition: all 0.2s ease;
   min-height: 40px;
   display: flex;
@@ -1217,7 +1428,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   border-color: var(--error-color);
 }
 
-/* Dark mode support */
 :deep(.dark) .specialty-button {
   background-color: var(--dark-surface-color);
   border-color: var(--dark-border-color);
@@ -1247,7 +1457,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
 }
 
 .preview-card {
-  /* background-color: var(--surface-color); */
   border-radius: var(--radius-sm);
   padding: var(--spacing-md);
   box-shadow: var(--shadow-sm);
@@ -1284,7 +1493,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
-  /* background-color: var(--surface-color); */
 }
 
 .modal-actions {
@@ -1293,13 +1501,12 @@ function toggleEditSpecialty(index, specialtyIndex) {
   margin-top: var(--spacing-md);
 }
 
-/* Dark mode support */
 :deep(.dark) .word-preview {
-  background-color: #1A202C; /* Match expanded term-item background */
+  background-color: #1A202C;
 }
 
 :deep(.dark) .preview-card {
-  background-color: #2D3748; /* Match term-item background */
+  background-color: #2D3748;
 }
 
 :deep(.dark) .preview-card h3 {
@@ -1315,7 +1522,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   color: var(--dark-text-color);
 }
 
-/* Responsive styles */
 @media (max-width: 768px) {
   .specialties-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1328,5 +1534,39 @@ function toggleEditSpecialty(index, specialtyIndex) {
   .modal-actions button {
     width: 100%;
   }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.scroll-top-button {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  z-index: 99;
+}
+
+.scroll-top-button:hover {
+  opacity: 1;
+  transform: translateY(-3px);
 }
 </style>

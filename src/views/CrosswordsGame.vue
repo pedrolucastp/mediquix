@@ -830,12 +830,13 @@ onMounted(() => {
   #crossword-container {
     flex-direction: column;
     align-items: center;
-    padding: 0;
+    padding: 20px 0;
   }
 
   #crossword {
-    width: 100%;
+    width: 90%;
     order: 2;
+    padding: 10px;
   }
 
   #clues {

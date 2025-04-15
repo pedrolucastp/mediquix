@@ -1,10 +1,16 @@
 import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  sendEmailVerification, 
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
+  browserLocalPersistence,
+  setPersistence
 } from "firebase/auth";
 import {
   getFirestore,
@@ -14,12 +20,16 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { setPersistence, browserLocalPersistence } from "firebase/auth";
 
+// Action code settings for password reset using dynamic URL
+const actionCodeSettings = {
+  url: `${window.location.origin}/auth/action`,
+  handleCodeInApp: true
+};
 
 const firebaseConfig = {
     apiKey: "AIzaSyA-U1ASN2yTDfutUHqblUO1HMyyvLhOBg4",
-    authDomain: "mediquix-fbc0b.firebaseapp.com",
+    authDomain: window.location.host,
     projectId: "mediquix-fbc0b",
     storageBucket: "mediquix-fbc0b.firebasestorage.app",
     messagingSenderId: "830867953772",
@@ -28,6 +38,16 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+auth.languageCode = 'pt';
+
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Auth persistence set to local.");
+  })
+  .catch((error) => {
+    console.error("Error setting auth persistence:", error);
+  });
 
 isSupported()
   .then((supported) => {
@@ -42,18 +62,7 @@ isSupported()
     console.error("Erro ao inicializar o Analytics:", error);
   });
 
-const auth = getAuth(app);
 const db = getFirestore(app);
-
-
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log("Auth persistence set to local.");
-  })
-  .catch((error) => {
-    console.error("Error setting auth persistence:", error);
-  });
-
 
 const initAuthState = (callback) => {
   return new Promise((resolve) => {
@@ -65,7 +74,7 @@ const initAuthState = (callback) => {
         console.log("No user is logged in.");
         callback(null);
       }
-      unsubscribe(); // Unsubscribe after first auth state change
+      unsubscribe();
       resolve();
     });
   });
@@ -82,4 +91,9 @@ export {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
+  actionCodeSettings
 };

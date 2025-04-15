@@ -1,8 +1,9 @@
 <template>
   <div class="hangman-game">
     <h1>Jogo da Forca</h1>
-    <!-- Componente de seletores -->
     <SelectorsComponent @specialty-change="startGame" @difficulty-change="startGame" />
+    
+    <GamePerksMenu :availablePerks="['hint']" @perk-activated="handlePerk" />
 
     <div class="game-container" v-show="gameStarted">
       <!-- Figura da Forca -->
@@ -21,198 +22,185 @@
           <line v-show="showLeftLeg" x1="150" y1="150" x2="120" y2="180" stroke="#2c3e50" stroke-width="4" />
           <line v-show="showRightLeg" x1="150" y1="150" x2="180" y2="180" stroke="#2c3e50" stroke-width="4" />
         </svg>
-        <!-- Mensagem (vitória ou derrota) -->
-        <div class="message-container">
-          <p>{{ message }}</p>
-        </div>
-
-        <!-- Botão para reiniciar o jogo -->
-        <button v-show="showRestart" @click="startGame">Reiniciar Jogo</button>
       </div>
-      <div>
-        <!-- Exibição da palavra oculta -->
-        <div class="word-container">
-          <span v-for="(letter, index) in displayedWord" :key="index" class="letter">
-            {{ letter }}
-          </span>
-        </div>
+      
+      <div class="message-container">
+        <p>{{ message }}</p>
+      </div>
 
-        <!-- Exibição da dica -->
-        <div class="clue-container">
-          <p>{{ selectedClue }}</p>
-        </div>
+      <div class="word-container">
+        <span v-for="(letter, index) in displayedWord" :key="index" class="letter">
+          {{ letter }}
+        </span>
+      </div>
 
-        <!-- Chute: input e botão -->
-        <div class="guess-container">
-          <input type="text" v-model="guessLetter" maxlength="1" placeholder="Insira uma letra"
-            @keydown.enter.prevent="handleGuess" />
-          <button @click="handleGuess">Chutar</button>
-        </div>
+      <div class="clue-container">
+        <p>{{ currentWord?.clue }}</p>
+      </div>
 
-        <!-- Informações: letras erradas e contagem de erros -->
-        <div class="info-container">
-          <p>Letras erradas: {{ wrongLetters.join(", ") }}</p>
-          <p>{{ wrongGuesses }} / {{ maxErrors }}</p>
-        </div>
+      <div class="guess-container">
+        <input 
+          type="text" 
+          v-model="guess" 
+          @keyup.enter="makeGuess"
+          maxlength="1"
+          :disabled="gameOver"
+        />
+        <button @click="makeGuess" :disabled="gameOver">Tentar</button>
+      </div>
+
+      <button id="restart-btn" v-show="showRestart" @click="startGame">Novo Jogo</button>
+
+      <!-- Show points earned when game ends -->
+      <div v-if="gameOver" class="completion-message">
+        <p v-if="won">Parabéns! Você venceu!</p>
+        <p v-else>Não foi dessa vez. A palavra era: {{ currentWord?.word }}</p>
+        <p v-if="pointsEarned">Pontos ganhos: {{ pointsEarned }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
-import { useVocabularyStore } from "@/store/vocabulary";
-import { useSettingsStore } from "@/store/settings";
-import SelectorsComponent from "@/components/SelectorsComponent.vue";
+import { ref, computed, onMounted } from 'vue';
+import SelectorsComponent from '@/components/SelectorsComponent.vue';
+import GamePerksMenu from '@/components/game/GamePerksMenu.vue';
+import { useVocabularyStore } from '@/store/vocabulary';
+import { useGamePoints } from '@/composables/useGamePoints';
 
-// Stores
 const vocabularyStore = useVocabularyStore();
-const settingsStore = useSettingsStore();
+const { POINTS_CONFIG, awardPoints } = useGamePoints();
 
 // Estado do jogo
-const gameStarted = ref(true);
-const selectedWord = ref("");
-const selectedClue = ref("");
-const displayedWord = ref([]);
-const wrongGuesses = ref(0);
-const maxErrors = 6;
-const wrongLetters = ref([]);
-const message = ref("");
-const guessLetter = ref("");
+const currentWord = ref(null);
+const guessedLetters = ref([]);
+const guess = ref('');
+const message = ref('');
+const gameStarted = ref(false);
 const showRestart = ref(false);
+const maxLives = 6;
+const lives = ref(maxLives);
+const gameOver = ref(false);
+const won = ref(false);
+const pointsEarned = ref(0);
 
-// Controle da figura da forca (reactive booleans)
-const showHead = ref(false);
-const showBody = ref(false);
-const showLeftArm = ref(false);
-const showRightArm = ref(false);
-const showLeftLeg = ref(false);
-const showRightLeg = ref(false);
+// Computed properties para partes da figura da forca
+const showHead = computed(() => lives.value < 6);
+const showBody = computed(() => lives.value < 5);
+const showLeftArm = computed(() => lives.value < 4);
+const showRightArm = computed(() => lives.value < 3);
+const showLeftLeg = computed(() => lives.value < 2);
+const showRightLeg = computed(() => lives.value < 1);
 
-// Para atualizar a figura da forca conforme erros:
-function resetHangmanFigure() {
-  showHead.value = false;
-  showBody.value = false;
-  showLeftArm.value = false;
-  showRightArm.value = false;
-  showLeftLeg.value = false;
-  showRightLeg.value = false;
-}
-
-function updateHangmanFigure() {
-  // Ativa as partes de acordo com wrongGuesses
-  const parts = [
-    showHead,
-    showBody,
-    showLeftArm,
-    showRightArm,
-    showLeftLeg,
-    showRightLeg,
-  ];
-  if (wrongGuesses.value > 0 && wrongGuesses.value <= parts.length) {
-    parts[wrongGuesses.value - 1].value = true;
-  }
-}
-
-// Variáveis para o grid da forca (opcional, se houver parte de desenho com letras ou não)
-const gameContainer = ref(null);
-
-// Função para escolher uma palavra aleatória com base nos filtros
-function startGame() {
-  resetHangmanFigure();
-  wrongGuesses.value = 0;
-  wrongLetters.value = [];
-  message.value = "";
-  guessLetter.value = "";
-  showRestart.value = false;
-
-  // Selecionar palavra com base no store (sem query selectors)
-  let filteredWords = vocabularyStore.words.filter(
-    (wordObj) => wordObj.isActive
+const displayedWord = computed(() => {
+  if (!currentWord.value) return [];
+  return currentWord.value.word.split('').map(letter => 
+    guessedLetters.value.includes(letter.toUpperCase()) ? letter : '_'
   );
+});
 
-  // Se desejar, pode filtrar também pelos valores do settingsStore, se necessário
-
+function startGame() {
+  const filteredWords = vocabularyStore.filteredWords;
   if (filteredWords.length === 0) {
-    alert("Nenhuma palavra encontrada com os filtros selecionados.");
-    gameStarted.value = false;
+    alert('Nenhuma palavra encontrada com os critérios selecionados.');
     return;
   }
 
-  // Selecionar aleatoriamente uma palavra
-  const randomIndex = Math.floor(Math.random() * filteredWords.length);
-  const chosen = filteredWords[randomIndex];
-  selectedWord.value = chosen.word.toUpperCase();
-  selectedClue.value = chosen.clue;
-
-  // Inicializa a palavra oculta: revela espaços e hifens
-  displayedWord.value = selectedWord.value.split("").map((char) => {
-    if (char.match(/[\s\-]/)) return char;
-    return "";
-  });
-
-  // Reinicia a figura da forca (oculta todas as partes)
-  resetHangmanFigure();
-
-  // Limpa o input
-  guessLetter.value = "";
+  currentWord.value = filteredWords[Math.floor(Math.random() * filteredWords.length)];
+  guessedLetters.value = [];
+  guess.value = '';
+  message.value = '';
+  gameStarted.value = true;
+  showRestart.value = false;
+  lives.value = maxLives;
+  gameOver.value = false;
+  won.value = false;
+  pointsEarned.value = 0;
 }
 
-function renderWord() {
-  // Aqui, o binding no template já renderiza a displayedWord
-}
+async function makeGuess() {
+  if (!guess.value || gameOver.value) return;
 
-function handleGuess() {
-  const guess = guessLetter.value.toUpperCase();
-  guessLetter.value = "";
+  const letter = guess.value.toUpperCase();
+  guess.value = '';
 
-  if (!/^[A-Z]$/.test(guess)) {
-    alert("Por favor, insira uma única letra de A a Z.");
+  if (guessedLetters.value.includes(letter)) {
+    message.value = 'Você já tentou essa letra!';
     return;
   }
 
-  // Verifica se a letra já foi chutada (ou se já está revelada)
-  if (
-    displayedWord.value.includes(guess) ||
-    wrongLetters.value.includes(guess)
-  ) {
-    alert("Você já chutou essa letra.");
-    return;
-  }
+  guessedLetters.value.push(letter);
 
-  // Verifica se a letra existe na palavra (considerando acentos se necessário)
-  let matched = false;
-  selectedWord.value.split("").forEach((letter, index) => {
-    if (letter === guess) {
-      displayedWord.value[index] = letter; // Revela a letra
-      matched = true;
-    }
-  });
-
-  if (matched) {
-    // Atualiza a exibição da palavra (o template já está vinculado a displayedWord)
-    // Verifica vitória
-    if (!displayedWord.value.includes("_")) {
-      message.value = "Parabéns! Você ganhou!";
-      showRestart.value = true;
+  if (!currentWord.value.word.toUpperCase().includes(letter)) {
+    lives.value--;
+    message.value = `Letra "${letter}" não encontrada. ${lives.value} tentativas restantes.`;
+    
+    if (lives.value === 0) {
+      await handleGameOver(false);
     }
   } else {
-    wrongGuesses.value++;
-    wrongLetters.value.push(guess);
-    updateHangmanFigure();
-    // Verifica derrota
-    if (wrongGuesses.value >= maxErrors) {
-      message.value = `Você perdeu! A palavra era "${selectedWord.value}".`;
-      displayedWord.value = selectedWord.value.split("");
-      showRestart.value = true;
+    message.value = `Boa! A letra "${letter}" existe na palavra.`;
+    
+    // Verifica se a palavra está completa
+    if (displayedWord.value.join('') === currentWord.value.word) {
+      await handleGameOver(true);
     }
   }
 }
 
-function restartGame() {
-  startGame();
+async function handleGameOver(hasWon) {
+  gameOver.value = true;
+  showRestart.value = true;
+  won.value = hasWon;
+
+  if (hasWon) {
+    message.value = 'Parabéns! Você venceu!';
+    const points = calculatePoints();
+    await awardPoints(points);
+    pointsEarned.value = points;
+  } else {
+    message.value = `Game Over! A palavra era: ${currentWord.value.word}`;
+  }
 }
 
+function calculatePoints() {
+  // Pontos base por vencer
+  let points = POINTS_CONFIG.GAME_COMPLETION;
+  
+  // Pontos bônus com base nas vidas restantes
+  points += lives.value * 2;
+  
+  // Bônus por jogo perfeito (sem erros)
+  if (lives.value === maxLives) {
+    points += POINTS_CONFIG.PERFECT_SCORE;
+  }
+  
+  return points;
+}
+
+function handlePerk(perkId) {
+  if (perkId === 'hint' && currentWord.value && !gameOver.value) {
+    // Encontra uma letra não revelada
+    const word = currentWord.value.word.toUpperCase();
+    const unrevealedLetters = word
+      .split('')
+      .filter(letter => !guessedLetters.value.includes(letter));
+    
+    if (unrevealedLetters.length > 0) {
+      // Revela uma letra não revelada aleatória
+      const letter = unrevealedLetters[Math.floor(Math.random() * unrevealedLetters.length)];
+      guessedLetters.value.push(letter);
+      message.value = `Dica: A letra "${letter}" existe na palavra.`;
+      
+      // Verifica se a palavra está completa após a dica
+      if (displayedWord.value.join('') === currentWord.value.word) {
+        handleGameOver(true);
+      }
+    }
+  }
+}
+
+// Inicia o jogo ao montar
 onMounted(() => {
   startGame();
 });
@@ -267,7 +255,6 @@ onMounted(() => {
 .clue-container {
   margin: 1rem;
   font-size: 1.125rem;
-  /* color: var(--secondary-color); */
   border: 2px solid #333;
   padding: 10px;
   border-radius: 5px;
@@ -292,7 +279,6 @@ onMounted(() => {
   font-size: 1rem;
   text-transform: uppercase;
   text-align: center;
-  /* width: 2rem; */
   padding: 0.5rem 1rem;
 }
 
@@ -332,6 +318,20 @@ onMounted(() => {
 
 #restart-btn:hover {
   background-color: #c0392b;
+}
+
+.completion-message {
+  margin-top: var(--spacing-md);
+  text-align: center;
+  padding: var(--spacing-md);
+  background-color: var(--surface-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+:deep(.dark) .completion-message {
+  background-color: var(--dark-surface-color);
+  border-color: var(--dark-border-color);
 }
 
 /* Responsivo */

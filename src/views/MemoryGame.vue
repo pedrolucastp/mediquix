@@ -160,6 +160,7 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: var(--spacing-md);
+  width: 100%;
 }
 
 #definition {
@@ -235,7 +236,7 @@ onMounted(() => {
   #game-board {
     grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-sm);
-    padding: var(--spacing-sm);
+    padding: var(--spacing-md);
     width: 100%;
   }
 

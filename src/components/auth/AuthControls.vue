@@ -3,7 +3,7 @@
     <!-- Not logged in state -->
     <template v-if="!authStore.isAuthenticated">
       <BaseButton @click="showAuthModal = true" variant="primary" :disabled="isLoading">
-        Login / Cadastro
+        Login
       </BaseButton>
     </template>
 
@@ -105,7 +105,7 @@
     </BaseModal>
 
     <!-- Auth Modal -->
-    <BaseModal v-model="showAuthModal" :title="isSignup ? 'Bem-vindo ao MediQuix!' : 'Bem-vindo de volta!'">
+    <BaseModal v-model="showAuthModal">
       <div class="auth-modal-content">
         <!-- App Introduction -->
         <div class="app-intro">
@@ -133,7 +133,7 @@
 
         <!-- Auth Forms -->
         <div class="auth-forms">
-          <template v-if="!isSignup">
+          <template v-if="!isSignup && !showForgotPassword && !showResetPassword">
             <BaseInput v-model="loginEmail" type="email" placeholder="Seu email" icon="envelope"
               :disabled="isLoading" />
             <BaseInput v-model="loginPassword" type="password" placeholder="Sua senha" icon="lock"
@@ -142,13 +142,63 @@
               @click="handleLogin">
               {{ isLoading ? 'Entrando...' : 'Entrar' }}
             </BaseButton>
+            <template v-if="showResendVerification">
+              <p class="auth-message">Ainda não verificou seu email?</p>
+              <BaseButton variant="secondary" icon="envelope" :loading="isResending" :disabled="isResending"
+                @click="handleResendVerification">
+                {{ isResending ? 'Reenviando...' : 'Reenviar email de verificação' }}
+              </BaseButton>
+            </template>
+            <p class="auth-switch-text">
+              <a class="toggle-link" @click="showForgotPassword = true">Esqueceu sua senha?</a>
+            </p>
             <p class="auth-switch-text">
               Ainda não tem uma conta?
               <a class="toggle-link" @click="toggleForm">Criar conta</a>
             </p>
           </template>
+
+          <template v-else-if="showForgotPassword">
+            <!-- <h3 class="form-title">Recuperar Senha</h3> -->
+            <template v-if="!resetEmailSent">
+              <p class="auth-message">Digite seu email para receber instruções de recuperação de senha.</p>
+              <BaseInput v-model="forgotPasswordEmail" type="email" placeholder="Seu email" icon="envelope"
+                :disabled="isLoading" />
+              <BaseButton class="modal-btn" icon="paper-plane" :loading="isLoading" :disabled="isLoading"
+                @click="handleForgotPassword">
+                {{ isLoading ? 'Enviando...' : 'Enviar instruções' }}
+              </BaseButton>
+            </template>
+            <template v-else>
+              <div class="success-message">
+                <font-awesome-icon icon="check-circle" class="success-icon" />
+                <p>Email enviado com sucesso!</p>
+                <p class="auth-message">Verifique sua caixa de entrada para redefinir sua senha.</p>
+              </div>
+            </template>
+            <p class="auth-switch-text">
+              <a class="toggle-link" @click="handleBackToLogin">Voltar ao login</a>
+            </p>
+          </template>
+
+          <template v-else-if="showResetPassword">
+            <h3 class="form-title">Redefinir Senha</h3>
+            <p class="auth-message">Digite sua nova senha para {{ resetEmail }}</p>
+            <BaseInput v-model="newPassword" type="password" placeholder="Nova senha" icon="lock"
+              :disabled="isLoading" />
+            <BaseInput v-model="confirmPassword" type="password" placeholder="Confirme a nova senha" icon="lock"
+              :disabled="isLoading" />
+            <BaseButton class="modal-btn" icon="key" :loading="isLoading" :disabled="isLoading || !passwordsMatch"
+              @click="handleResetPassword">
+              {{ isLoading ? 'Alterando...' : 'Alterar Senha' }}
+            </BaseButton>
+            <p v-if="!passwordsMatch && newPassword && confirmPassword" class="error-message">
+              As senhas não coincidem
+            </p>
+          </template>
+
           <template v-else>
-            <BaseInput v-model="signupEmail" type="email" placeholder="Seu melhor email" icon="envelope"
+            <BaseInput v-model="signupEmail" type="email" placeholder="Seu email" icon="envelope"
               :disabled="isLoading" />
             <BaseInput v-model="signupPassword" type="password" placeholder="Escolha uma senha segura" icon="lock"
               :disabled="isLoading" />
@@ -196,11 +246,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { usePaymentsStore } from '@/store/payments';
 import { specialties } from '@/data/defaultSpecialties';
+import { useRoute, useRouter } from 'vue-router';
 import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseSelect from '@/components/base/BaseSelect.vue';
@@ -212,6 +263,8 @@ const uiStore = useUIStore();
 const paymentsStore = usePaymentsStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
 const isLoading = ref(false);
+const isResending = ref(false);
+const showResendVerification = ref(false);
 
 // Auth state
 const showAuthModal = ref(false);
@@ -220,6 +273,58 @@ const loginEmail = ref('');
 const loginPassword = ref('');
 const signupEmail = ref('');
 const signupPassword = ref('');
+const showForgotPassword = ref(false);
+const forgotPasswordEmail = ref('');
+const resetEmailSent = ref(false);
+const showResetPassword = ref(false);
+const resetEmail = ref('');
+const newPassword = ref('');
+const confirmPassword = ref('');
+const actionCode = ref('');
+const route = useRoute();
+const router = useRouter();
+
+const passwordsMatch = computed(() => 
+  !newPassword.value || !confirmPassword.value || newPassword.value === confirmPassword.value
+);
+
+onMounted(async () => {
+  // Check if we have a password reset code in the URL
+  const oobCode = route.query.oobCode;
+  if (oobCode) {
+    try {
+      showAuthModal.value = true;
+      showResetPassword.value = true;
+      actionCode.value = oobCode;
+      resetEmail.value = await authStore.verifyResetCode(oobCode);
+      // Remove the oobCode from URL
+      router.replace({ query: {} });
+    } catch (error) {
+      showResetPassword.value = false;
+    }
+  }
+});
+
+async function handleResetPassword() {
+  if (!passwordsMatch.value) return;
+  
+  try {
+    isLoading.value = true;
+    await authStore.confirmPasswordChange(actionCode.value, newPassword.value);
+    showResetPassword.value = false;
+    showForgotPassword.value = false;
+    isSignup.value = false;
+    // Clear the form
+    newPassword.value = '';
+    confirmPassword.value = '';
+    actionCode.value = '';
+    resetEmail.value = '';
+  } catch (error) {
+    // Error is handled by the store
+  } finally {
+    isLoading.value = false;
+  }
+}
 
 // Settings state
 const showSettingsModal = ref(false);
@@ -281,9 +386,13 @@ function toggleForm() {
 async function handleLogin() {
   try {
     isLoading.value = true;
+    showResendVerification.value = false;
     await authStore.login(loginEmail.value, loginPassword.value);
     showAuthModal.value = false;
   } catch (error) {
+    if (error.message.includes('email') && error.message.includes('verify')) {
+      showResendVerification.value = true;
+    }
     uiStore.setError('auth', error.message);
   } finally {
     isLoading.value = false;
@@ -295,6 +404,7 @@ async function handleSignup() {
     isLoading.value = true;
     await authStore.signup(signupEmail.value, signupPassword.value);
     showAuthModal.value = false;
+    uiStore.setSuccess('Verifique seu email para ativar sua conta.');
   } catch (error) {
     uiStore.setError('auth', error.message);
   } finally {
@@ -302,10 +412,37 @@ async function handleSignup() {
   }
 }
 
+async function handleResendVerification() {
+  try {
+    isResending.value = true;
+    await authStore.resendVerificationEmail();
+    showResendVerification.value = false;
+  } catch (error) {
+    uiStore.setError('auth', error.message);
+  } finally {
+    isResending.value = false;
+  }
+}
+
+async function handleForgotPassword() {
+  try {
+    await authStore.forgotPassword(forgotPasswordEmail.value);
+    resetEmailSent.value = true;
+  } catch (error) {
+    // Error is already handled by the store
+  }
+}
+
+function handleBackToLogin() {
+  showForgotPassword.value = false;
+  resetEmailSent.value = false;
+}
+
 async function handleLogout() {
   try {
     isLoading.value = true;
     await authStore.logout();
+    showUserModal.value = false;
   } catch (error) {
     uiStore.setError('auth', error.message);
   } finally {
@@ -459,6 +596,48 @@ async function saveSettings() {
   color: var(--text-secondary);
 }
 
+.auth-message {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: var(--text-color-muted);
+  text-align: center;
+}
+
+.form-title {
+  text-align: center;
+  color: var(--primary-color);
+  margin: 0 0 var(--spacing-md);
+  font-size: 1.3rem;
+}
+
+.success-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+}
+
+.success-icon {
+  color: var(--success-color);
+  font-size: 2rem;
+}
+
+.dark .success-icon {
+  color: var(--dark-success-color);
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: var(--spacing-sm);
+}
+
+.dark .error-message {
+  color: var(--dark-error-color);
+}
+
 /* Dark mode styles */
 .dark .intro-title {
   color: var(--dark-primary-color);
@@ -478,6 +657,14 @@ async function saveSettings() {
 
 .dark .auth-switch-text {
   color: var(--dark-text-secondary);
+}
+
+.dark .auth-message {
+  color: var(--dark-text-color-muted);
+}
+
+.dark .form-title {
+  color: var(--dark-primary-color);
 }
 
 /* Responsive styles */
@@ -669,5 +856,15 @@ async function saveSettings() {
   .donation-stats {
     grid-template-columns: 1fr;
   }
+}
+
+.modal-text {
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+  color: var(--text-secondary);
+}
+
+.dark .modal-text {
+  color: var(--dark-text-secondary);
 }
 </style>

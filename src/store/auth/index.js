@@ -10,7 +10,12 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  initAuthState
+  initAuthState,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
+  actionCodeSettings
 } from '@/firebase';
 import { useSettingsStore } from '../settings';
 import { useUIStore } from '../ui/index';
@@ -23,6 +28,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters
   const isAuthenticated = computed(() => !!user.value);
+  const isEmailVerified = computed(() => !!user.value?.emailVerified);
   const userProfile = computed(() => user.value?.settings || null);
   const username = computed(() => 
     user.value?.settings?.username || user.value?.email?.split('@')[0] || null
@@ -48,6 +54,13 @@ export const useAuthStore = defineStore('auth', () => {
       uiStore.setLoading('auth', true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       user.value = userCredential.user;
+      
+      if (!user.value.emailVerified) {
+        uiStore.setError('auth', 'Please verify your email address before logging in.');
+        await logout();
+        return;
+      }
+      
       await fetchUserSettings();
     } catch (error) {
       uiStore.setError('auth', error.message);
@@ -63,6 +76,9 @@ export const useAuthStore = defineStore('auth', () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       user.value = userCredential.user;
 
+      // Send verification email
+      await sendEmailVerification(user.value);
+
       const defaultSettings = {
         username: email.split('@')[0],
         email: email,
@@ -70,7 +86,11 @@ export const useAuthStore = defineStore('auth', () => {
         default_difficulty: Number(settingsStore.settings.defaultDifficulty),
         default_speciality: Number(settingsStore.settings.defaultSpecialty),
         isPremium: false,
-        premiumActivatedAt: null
+        premiumActivatedAt: null,
+        emailVerified: false,
+        points: 0,
+        freePoints: 10, // Start with 10 free points
+        lastFreePointsUpdate: new Date()
       };
 
       await setDoc(doc(db, "users", user.value.uid), defaultSettings);
@@ -80,12 +100,24 @@ export const useAuthStore = defineStore('auth', () => {
         defaultSpecialty: defaultSettings.default_speciality,
         defaultDifficulty: defaultSettings.default_difficulty
       });
+
+      // Sign out until email is verified
+      await logout();
+      uiStore.setSuccess('Please check your email to verify your account before logging in.');
     } catch (error) {
       uiStore.setError('auth', error.message);
       throw error;
     } finally {
       uiStore.setLoading('auth', false);
     }
+  }
+
+  async function resendVerificationEmail() {
+    if (!user.value) {
+      throw new Error('No user is currently signed in');
+    }
+    await sendEmailVerification(user.value);
+    uiStore.setSuccess('Verification email has been resent.');
   }
 
   async function logout() {
@@ -117,7 +149,8 @@ export const useAuthStore = defineStore('auth', () => {
           default_speciality: Number(settingsStore.settings.defaultSpecialty),
           custom_vocabulary: [],
           isPremium: false,
-          premiumActivatedAt: null
+          premiumActivatedAt: null,
+          emailVerified: user.value.emailVerified || false
         };
 
         const mergedSettings = {
@@ -127,7 +160,8 @@ export const useAuthStore = defineStore('auth', () => {
           default_speciality: Number(settingsData.default_speciality ?? defaultSettings.default_speciality),
           custom_vocabulary: Array.isArray(settingsData.custom_vocabulary) ? settingsData.custom_vocabulary : [],
           isPremium: Boolean(settingsData.isPremium),
-          premiumActivatedAt: settingsData.premiumActivatedAt || null
+          premiumActivatedAt: settingsData.premiumActivatedAt || null,
+          emailVerified: user.value.emailVerified || false
         };
 
         if (JSON.stringify(mergedSettings) !== JSON.stringify(settingsData)) {
@@ -161,7 +195,8 @@ export const useAuthStore = defineStore('auth', () => {
         default_difficulty: Number(newSettings.default_difficulty),
         default_speciality: Number(newSettings.default_speciality),
         isPremium: Boolean(newSettings.isPremium ?? currentSettings.isPremium),
-        premiumActivatedAt: newSettings.premiumActivatedAt || currentSettings.premiumActivatedAt
+        premiumActivatedAt: newSettings.premiumActivatedAt || currentSettings.premiumActivatedAt,
+        emailVerified: currentSettings.emailVerified || false
       };
 
       await updateDoc(userDocRef, updatedSettings);
@@ -179,10 +214,47 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function forgotPassword(email) {
+    try {
+      if (!email) {
+        throw new Error('Email é obrigatório');
+      }
+      uiStore.setLoading('auth', true);
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      uiStore.setSuccess('Email enviado com instruções para redefinir sua senha.');
+    } catch (error) {
+      uiStore.setError('auth', error.message);
+      throw error;
+    } finally {
+      uiStore.setLoading('auth', false);
+    }
+  }
+
+  async function verifyResetCode(actionCode) {
+    try {
+      const email = await verifyPasswordResetCode(auth, actionCode);
+      return email;
+    } catch (error) {
+      uiStore.setError('auth', 'O link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.');
+      throw error;
+    }
+  }
+
+  async function confirmPasswordChange(actionCode, newPassword) {
+    try {
+      await confirmPasswordReset(auth, actionCode, newPassword);
+      uiStore.setSuccess('Senha alterada com sucesso! Você já pode fazer login.');
+    } catch (error) {
+      uiStore.setError('auth', 'Não foi possível alterar sua senha. Por favor, tente novamente.');
+      throw error;
+    }
+  }
+
   return {
     user,
     initialized,
     isAuthenticated,
+    isEmailVerified,
     userProfile,
     username,
     isPremium,
@@ -191,6 +263,10 @@ export const useAuthStore = defineStore('auth', () => {
     signup,
     logout,
     updateUserProfile,
-    fetchUserSettings
+    fetchUserSettings,
+    resendVerificationEmail,
+    forgotPassword,
+    verifyResetCode,
+    confirmPasswordChange
   };
 });

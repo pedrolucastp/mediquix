@@ -3,22 +3,25 @@ import { ref } from 'vue';
 import { createPayment, getPaymentStatus, getPurchaseHistory, getDonationsHistory } from './api';
 import { useUIStore } from '../ui';
 import { useAuthStore } from '../auth';
+import { usePointsStore } from '../points';
 
 export const usePaymentsStore = defineStore('payments', () => {
   const orders = ref([]);
   const donationsHistory = ref(null);
   const uiStore = useUIStore();
   const authStore = useAuthStore();
+  const pointsStore = usePointsStore();
   
   const loading = ref(false);
   const error = ref(null);
   const pollingInterval = ref(null);
   const pollingStartTime = ref(null);
 
-  // Premium product configuration
+  // Product configuration
   const PREMIUM_PRICE = 1.99; // Price in BRL
+  const POINTS_PER_BRL = 5; // Points per BRL ratio
   const POLLING_INTERVAL_MS = 5000; // Check payment status every 5 seconds
-  const MAX_POLLING_DURATION_MS = 5 * 60 * 1000; // Stop polling after 15 minutes
+  const MAX_POLLING_DURATION_MS = 5 * 60 * 1000; // Stop polling after 5 minutes
 
   async function purchasePremium() {
     try {
@@ -41,6 +44,29 @@ export const usePaymentsStore = defineStore('payments', () => {
     }
   }
 
+  async function purchasePoints(amount) {
+    try {
+      loading.value = true;
+      const priceInBRL = Math.ceil(amount / POINTS_PER_BRL);
+      
+      const payment = await createPayment({
+        amount: priceInBRL,
+        productId: 'points-purchase',
+        metadata: {
+          pointsAmount: amount
+        }
+      });
+      
+      startPolling(payment.id);
+      return payment;
+    } catch (error) {
+      uiStore.setError('points', error.message);
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   async function checkPaymentStatus(paymentId) {
     try {
       // Check if we've exceeded max polling duration
@@ -54,8 +80,15 @@ export const usePaymentsStore = defineStore('payments', () => {
       
       if (status.status === 'approved') {
         stopPolling();
-        await authStore.fetchUserSettings();
-        uiStore.setSuccess('Pagamento aprovado! Você agora tem acesso Premium.');
+        
+        // Handle points purchase if applicable
+        if (status.productId === 'points-purchase' && status.metadata?.pointsAmount) {
+          await pointsStore.addPurchasedPoints(Number(status.metadata.pointsAmount));
+        } else {
+          await authStore.fetchUserSettings();
+        }
+        
+        uiStore.setSuccess('Pagamento aprovado!');
         return true;
       }
       
@@ -125,7 +158,9 @@ export const usePaymentsStore = defineStore('payments', () => {
     loading,
     error,
     donationsHistory,
+    POINTS_PER_BRL,
     purchasePremium,
+    purchasePoints,
     loadPurchaseHistory,
     checkPaymentStatus,
     stopPolling,

@@ -27,9 +27,11 @@ import {
   faQuestion,
   faEnvelope,
   faLock,
+  faKey,
   faChevronDown,
   faCircleNotch,
   faPenToSquare,
+  faCheckCircle,
   faChevronRight,
   faEllipsisH,
   faCheckSquare,
@@ -45,6 +47,9 @@ import {
   faChartLine,
   faBookMedical,
   faInfoCircle,
+  faLightbulb,
+  faArrowUp,
+  faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -76,9 +81,11 @@ library.add(
   faQuestion,
   faEnvelope,
   faLock,
+  faKey,
   faChevronDown,
   faCircleNotch,
   faPenToSquare,
+  faCheckCircle,
   faChevronRight,
   faEllipsisH,
   faCheckSquare,
@@ -94,4 +101,7 @@ library.add(
   faChartLine,
   faBookMedical,
   faInfoCircle,
+  faLightbulb,
+  faArrowUp,
+  faPaperPlane,
 )

@@ -39,10 +39,6 @@ const games = [
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* height: 100vh; */
-  /* width: 100vw; */
-  /* background: linear-gradient(135deg, #4facfe, #00f2fe); */
-  background: lightgoldenrodyellow;
   color: var(--text-color);
   text-align: center;
   padding: 2rem;
@@ -163,7 +159,7 @@ const games = [
   }
 
   .game-card {
-    width: 250px;
+    /* width: 250px; */
     padding: 1rem;
   }
 
@@ -173,6 +169,7 @@ const games = [
 
   .game-description {
     font-size: 0.9rem;
+    display: none;
   }
   .tagline {
     font-size: 1rem;

@@ -61,6 +61,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function setWordSearchGridSize(width, height, cellSize) {
+    console.log('setWordSearchGridSize', { width, height, cellSize });
     settings.value.wordSearchGame = {
       ...settings.value.wordSearchGame,
       gridWidth: width,
