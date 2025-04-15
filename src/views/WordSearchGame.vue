@@ -116,7 +116,7 @@ const statusMessage = ref("");
 const selectedCells = ref([]);
 const pointsEarned = ref(0);
 
-const { POINTS_CONFIG, awardPoints } = useGamePoints();
+const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
 
 const allWordsFound = computed(() => {
   return gameWords.value.length > 0 &&
@@ -443,11 +443,13 @@ function calculateGamePoints() {
   return basePoints + POINTS_CONFIG.GAME_COMPLETION + (isPerfect ? POINTS_CONFIG.PERFECT_SCORE : 0);
 }
 
-function handlePerk(perkId) {
+async function handlePerk(perkId) {
+  // Always deduct points before applying perk effect
+  const success = await usePerk(perkId);
+  if (!success) return;
   if (perkId === 'hint') {
     const unfoundWords = gameWords.value
       .filter(word => !foundWords.value.includes(word.word.toUpperCase()));
-
     if (unfoundWords.length > 0) {
       const randomWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
       const cells = findWordCells(randomWord.word.toUpperCase());

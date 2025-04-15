@@ -61,7 +61,7 @@ const correctAnswers = ref(0);
 let timer = null;
 
 const vocabularyStore = useVocabularyStore();
-const { POINTS_CONFIG, awardPoints } = useGamePoints();
+const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
 
 const currentQuestion = computed(() => {
   return selectedQuestions.value[currentQuestionIndex.value];
@@ -171,7 +171,10 @@ async function handleGameCompletion() {
   pointsEarned.value = points;
 }
 
-function handlePerk(perkId) {
+async function handlePerk(perkId) {
+  // Always deduct points before applying perk effect
+  const success = await usePerk(perkId);
+  if (!success) return;
   if (perkId === "skip") {
     nextQuestion();
   } else if (perkId === "extra_time") {

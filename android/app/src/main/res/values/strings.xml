@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">mediquix</string>
+    <string name="title_activity_main">mediquix</string>
+    <string name="package_name">com.mediquix.app</string>
+    <string name="custom_url_scheme">com.mediquix.app</string>
+</resources>

@@ -27,7 +27,11 @@ service cloud.firestore {
         && word.specialties.size() <= 5;
     }
 
-    // Validate complete user document
+    /**
+     * @function validateUser
+     * @param {map} data - User document data
+     * @returns {bool} True if user data is valid
+     */
     function validateUser(data) {
       return data.keys().hasAll(['username', 'email', 'custom_vocabulary', 'default_difficulty', 'default_speciality', 'isPremium', 'premiumActivatedAt', 'points', 'freePoints', 'lastFreePointsUpdate'])
         && isValidString(data.username, 3, 30)
@@ -48,6 +52,19 @@ service cloud.firestore {
         && (data.premiumActivatedAt == null || data.premiumActivatedAt is timestamp);
     }
 
+    /**
+     * @function validatePointsMutation
+     * @param {map} request - The request.resource.data
+     * @param {map} resource - The resource.data
+     * @returns {bool} True if points/freePoints mutation is valid (atomic, small delta)
+     */
+    function validatePointsMutation(request, resource) {
+      return (
+        (request.points == resource.points || abs(request.points - resource.points) <= 100)
+        && (request.freePoints == resource.freePoints || abs(request.freePoints - resource.freePoints) <= 100)
+      );
+    }
+
     // Allow users to read and write only their own data
     match /users/{userId} {
       allow create: if request.auth != null 
@@ -59,7 +76,8 @@ service cloud.firestore {
       
       allow update: if request.auth != null 
                     && request.auth.uid == userId
-                    && validateUser(request.resource.data);
+                    && validateUser(request.resource.data)
+                    && validatePointsMutation(request.resource.data, resource.data);
       
       allow delete: if request.auth != null 
                     && request.auth.uid == userId;

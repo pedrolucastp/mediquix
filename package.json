@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "vite build && firebase deploy --only hosting"
+    "deploy:hosting": "vite build && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -19,6 +20,9 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.2.0",
+    "@capacitor/cli": "^7.2.0",
+    "@capacitor/core": "^7.2.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "vite": "^6.0.5"
   }

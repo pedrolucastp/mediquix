@@ -5,7 +5,7 @@
       @specialty-change="createBoard"
       @difficulty-change="createBoard"
     />
-
+    <GamePerksMenu :availablePerks="['hint', 'open_third_card']" @perk-activated="handlePerk" />
     <p id="definition">
       {{
         currentDefinition
@@ -13,20 +13,18 @@
           : "Todas as palavras foram encontradas!"
       }}
     </p>
-
     <div id="game-board">
       <GameCardFlip
         v-for="(card, index) in gameCards"
         :key="index"
         :flipped="card.flipped"
         :matched="card.matched"
-        :disabled="count === 2"
+        :disabled="count >= maxOpenCards"
         @click="flipCard(index)"
       >
         <template #back>{{ card.word }}</template>
       </GameCardFlip>
     </div>
-
     <p id="score">Pontuação: {{ score }}</p>
   </div>
 </template>
@@ -35,9 +33,12 @@
 import { ref, onMounted } from "vue";
 import SelectorsComponent from "@/components/SelectorsComponent.vue";
 import GameCardFlip from "@/components/game/GameCardFlip.vue";
+import GamePerksMenu from '@/components/game/GamePerksMenu.vue';
+import { useGamePoints } from '@/composables/useGamePoints';
 import { useVocabularyStore } from "@/store/vocabulary";
 
 const vocabularyStore = useVocabularyStore();
+const { usePerk } = useGamePoints();
 
 const score = ref(0);
 const gameCards = ref([]);
@@ -47,12 +48,18 @@ const availableDefinitions = ref([]);
 const count = ref(0);
 const firstCardIndex = ref(null);
 const secondCardIndex = ref(null);
+const thirdCardIndex = ref(null);
 const matchedCards = ref([]);
+const maxOpenCards = ref(2); // Default is 2, can be set to 3 by perk
 
 function createBoard() {
   score.value = 0;
   count.value = 0;
   matchedCards.value = [];
+  maxOpenCards.value = 2;
+  firstCardIndex.value = null;
+  secondCardIndex.value = null;
+  thirdCardIndex.value = null;
 
   let filteredWords = vocabularyStore.words.filter((word) => word.isActive);
   if (filteredWords.length < 2) {
@@ -99,6 +106,12 @@ function flipCard(index) {
   } else if (count.value === 1) {
     secondCardIndex.value = index;
     count.value = 2;
+    if (maxOpenCards.value === 2) {
+      checkMatch();
+    }
+  } else if (count.value === 2 && maxOpenCards.value === 3) {
+    thirdCardIndex.value = index;
+    count.value = 3;
     checkMatch();
   }
 }
@@ -106,38 +119,71 @@ function flipCard(index) {
 function checkMatch() {
   const firstCard = gameCards.value[firstCardIndex.value];
   const secondCard = gameCards.value[secondCardIndex.value];
-
-  if (
-    firstCard.word === currentDefinition.value.word &&
-    secondCard.word === currentDefinition.value.word
-  ) {
-    firstCard.matched = true;
-    secondCard.matched = true;
-    matchedCards.value.push(firstCard, secondCard);
-    resetGuesses();
-
-    if (matchedCards.value.length === gameCards.value.length) {
-      setTimeout(() => {
-        alert(
-          `Parabéns! Você encontrou todos os pares com ${score.value} cliques.`
-        );
-        createBoard();
-      }, 500);
+  if (maxOpenCards.value === 2 || thirdCardIndex.value === null) {
+    if (
+      firstCard.word === currentDefinition.value.word &&
+      secondCard.word === currentDefinition.value.word
+    ) {
+      firstCard.matched = true;
+      secondCard.matched = true;
+      matchedCards.value.push(firstCard, secondCard);
+      resetGuesses();
+      if (matchedCards.value.length === gameCards.value.length) {
+        setTimeout(() => {
+          alert(
+            `Parabéns! Você encontrou todos os pares com ${score.value} cliques.`
+          );
+          createBoard();
+        }, 500);
+      } else {
+        setTimeout(() => {
+          selectNextDefinition();
+        }, 500);
+      }
     } else {
       setTimeout(() => {
-        selectNextDefinition();
-      }, 500);
+        unflipCards();
+      }, 1000);
     }
   } else {
-    setTimeout(() => {
-      unflipCards();
-    }, 1000);
+    const thirdCard = gameCards.value[thirdCardIndex.value];
+    const word = currentDefinition.value.word;
+    let matched = 0;
+    if (firstCard.word === word) matched++;
+    if (secondCard.word === word) matched++;
+    if (thirdCard.word === word) matched++;
+    if (matched >= 2) {
+      [firstCard, secondCard, thirdCard].forEach(card => {
+        if (card.word === word) card.matched = true;
+      });
+      matchedCards.value.push(...[firstCard, secondCard, thirdCard].filter(card => card.word === word));
+      resetGuesses();
+      maxOpenCards.value = 2;
+      if (matchedCards.value.length === gameCards.value.length) {
+        setTimeout(() => {
+          alert(
+            `Parabéns! Você encontrou todos os pares com ${score.value} cliques.`
+          );
+          createBoard();
+        }, 500);
+      } else {
+        setTimeout(() => {
+          selectNextDefinition();
+        }, 500);
+      }
+    } else {
+      setTimeout(() => {
+        unflipCards();
+        maxOpenCards.value = 2;
+      }, 1000);
+    }
   }
 }
 
 function unflipCards() {
-  gameCards.value[firstCardIndex.value].flipped = false;
-  gameCards.value[secondCardIndex.value].flipped = false;
+  if (firstCardIndex.value !== null) gameCards.value[firstCardIndex.value].flipped = false;
+  if (secondCardIndex.value !== null) gameCards.value[secondCardIndex.value].flipped = false;
+  if (thirdCardIndex.value !== null) gameCards.value[thirdCardIndex.value].flipped = false;
   resetGuesses();
 }
 
@@ -145,6 +191,28 @@ function resetGuesses() {
   count.value = 0;
   firstCardIndex.value = null;
   secondCardIndex.value = null;
+  thirdCardIndex.value = null;
+}
+
+async function handlePerk(perkId) {
+  const success = await usePerk(perkId);
+  if (!success) return;
+  if (perkId === 'hint' && currentDefinition.value) {
+    const word = currentDefinition.value.word;
+    const indices = gameCards.value
+      .map((card, idx) => ({ card, idx }))
+      .filter(({ card }) => card.word === word && !card.matched && !card.flipped)
+      .map(({ idx }) => idx);
+    if (indices.length >= 2) {
+      gameCards.value[indices[0]].flipped = true;
+      gameCards.value[indices[1]].flipped = true;
+      setTimeout(() => {
+        checkMatch();
+      }, 500);
+    }
+  } else if (perkId === 'open_third_card') {
+    maxOpenCards.value = 3;
+  }
 }
 
 onMounted(() => {
@@ -199,10 +267,6 @@ onMounted(() => {
   transform: rotate(-6deg);
 }
 
-/* #game-board :deep(.card:hover) {
-  transform:  translateY(-5px);
-} */
-
 #game-board :deep(.card.flipped) {
   transform: rotate(6deg);
 }
@@ -220,14 +284,12 @@ onMounted(() => {
   color: var(--primary-color);
 }
 
-/* Dark mode styles */
 :deep(.dark) #definition {
   background-color: var(--dark-surface-color);
   color: var(--dark-text-color);
   border-color: var(--dark-border-color);
 }
 
-/* Responsive styles */
 @media (max-width: 768px) {
   .memory-game {
     padding: var(--spacing-sm);

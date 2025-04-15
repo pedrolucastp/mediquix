@@ -69,7 +69,7 @@ import { useVocabularyStore } from '@/store/vocabulary';
 import { useGamePoints } from '@/composables/useGamePoints';
 
 const vocabularyStore = useVocabularyStore();
-const { POINTS_CONFIG, awardPoints } = useGamePoints();
+const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
 
 // Estado do jogo
 const currentWord = ref(null);
@@ -178,20 +178,21 @@ function calculatePoints() {
   return points;
 }
 
-function handlePerk(perkId) {
+async function handlePerk(perkId) {
+  // Always deduct points before applying perk effect
+  const success = await usePerk(perkId);
+  if (!success) return;
   if (perkId === 'hint' && currentWord.value && !gameOver.value) {
     // Encontra uma letra não revelada
     const word = currentWord.value.word.toUpperCase();
     const unrevealedLetters = word
       .split('')
       .filter(letter => !guessedLetters.value.includes(letter));
-    
     if (unrevealedLetters.length > 0) {
       // Revela uma letra não revelada aleatória
       const letter = unrevealedLetters[Math.floor(Math.random() * unrevealedLetters.length)];
       guessedLetters.value.push(letter);
       message.value = `Dica: A letra "${letter}" existe na palavra.`;
-      
       // Verifica se a palavra está completa após a dica
       if (displayedWord.value.join('') === currentWord.value.word) {
         handleGameOver(true);

@@ -1,5 +1,6 @@
 <template>
   <div class="crosswords-game">
+    <GamePerksMenu :availablePerks="['hint', 'extra_time', 'skip']" @perk-activated="handlePerk" />
     <div id="crossword-container">
       <div id="crossword" :style="gridStyle">
         <template v-for="row in gridRows" :key="row">
@@ -47,6 +48,10 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useVocabularyStore } from '@/store/vocabulary'
 import SelectorsComponent from '@/components/SelectorsComponent.vue'
+import { useGamePoints } from '@/composables/useGamePoints';
+import GamePerksMenu from '@/components/game/GamePerksMenu.vue'
+
+const { usePerk } = useGamePoints();
 
 // Constants
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
@@ -732,6 +737,34 @@ async function startGame(force = false) {
     isLoading.value = false
     clearHighlights()
     isInitialLoad.value = false
+  }
+}
+
+/**
+ * @function handlePerk
+ * @param {string} perkId - The perk to activate
+ * @returns {Promise<void>}
+ * @description Deducts points and applies the perk effect. 'hint' reveals a random letter in the grid.
+ */
+async function handlePerk(perkId) {
+  const success = await usePerk(perkId);
+  if (!success) return;
+  if (perkId === 'hint') {
+    // Reveal a random letter in the crossword grid
+    const allInputs = Object.values(cellRefs).filter(input => input && input.value === '');
+    if (allInputs.length > 0) {
+      const randomInput = allInputs[Math.floor(Math.random() * allInputs.length)];
+      randomInput.value = randomInput.dataset.correct;
+      randomInput.style.backgroundColor = '#ffe066';
+      setTimeout(() => {
+        randomInput.style.backgroundColor = '';
+      }, 1000);
+    }
+  } else if (perkId === 'extra_time') {
+    // Placeholder: implement timer logic if/when timer is added
+    // e.g., timer.value += 30;
+  } else if (perkId === 'skip') {
+    // Placeholder: implement skip logic if/when skipping clues is supported
   }
 }
 
