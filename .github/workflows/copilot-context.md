@@ -1,121 +1,152 @@
-# MediQuix Vue Code Organization Guidelines
+# MediQuix Application State
 
-## Project Structure Guidelines
+## Core Systems
 
-### Store Management
-1. **State Management Organization**
-   - Each store should have a single, well-defined responsibility
-   - Avoid duplicating state or logic between stores
-   - Stores should be categorized as follows:
-     - `auth`: Authentication and user management
-     - `settings`: User preferences and application settings
-     - `vocabulary`: Core vocabulary data and operations
-     - `ui`: UI-related state (dark mode, modals, etc.)
+### Authentication System
+1. **User States**
+   - Unauthenticated
+   - Authenticated (Unverified)
+   - Authenticated (Verified)
+   - Premium User
 
-2. **Store Interaction Guidelines**
-   - Stores should communicate through actions/mutations
-   - Avoid direct store-to-store dependencies
-   - Use composable functions for complex cross-store operations
+2. **User Data Model**
+   ```js
+   {
+     username: string,
+     email: string,
+     custom_vocabulary: Word[],
+     default_difficulty: number,
+     default_speciality: number,
+     isPremium: boolean,
+     premiumActivatedAt: timestamp,
+     points: number,
+     freePoints: number,
+     lastFreePointsUpdate: timestamp
+   }
+   ```
 
-### Component Organization
-1. **Component Hierarchy**
-   - Components should follow single responsibility principle
-   - Break down large components into smaller, reusable pieces
-   - Use composition API for shared logic
+### Points Economy
+1. **Points Sources**
+   - Game Achievements
+     - Word Found: 2 points
+     - Game Completion: 10 points
+     - Perfect Score: 15 points
+     - Time Bonus: 5 points
+   - Daily Rewards: 10 points/day
+   - Purchased Points: 5 points/BRL
 
-2. **Component Categories**
-   - `base/`: Base/atomic components (buttons, inputs, etc.)
-   - `common/`: Reusable components used across multiple views
-   - `layout/`: Layout components (header, footer, navigation)
-   - `features/`: Feature-specific components
-   - `views/`: Page components
+2. **Points Usage**
+   - Game Perks
+     - Hint: 5 points
+     - Extra Time: 3 points
+     - Skip: 8 points
+   - Points Types
+     - Free Points (from gameplay)
+     - Purchased Points
 
-3. **Component Best Practices**
-   - Keep components focused and under 300 lines
-   - Extract reusable logic into composables
-   - Use props and events for component communication
-   - Document component props and events
+### Payment Infrastructure
+1. **Payment Methods**
+   - PIX (Brazilian instant payment)
+   - Integration with MercadoPago
 
-### Authentication and User Settings
-1. **Authentication Flow**
-   - Centralize auth logic in auth store
-   - Separate UI components from auth business logic
-   - Use guards for protected routes
+2. **Products**
+   - Premium Access (R$1.99)
+   - Point Packages (5 points/BRL)
 
-2. **User Settings Management**
-   - Persist user preferences in local storage
-   - Sync with backend when user is authenticated
-   - Implement fallback defaults for all settings
+3. **Payment States**
+   - Pending
+   - Approved
+   - Rejected
+   - Cancelled
+   - Refunded
 
-### Code Style and Conventions
-1. **File Naming**
-   - Use PascalCase for component files
-   - Use camelCase for utility files
-   - Use kebab-case for asset files
+### Game Mechanics
+1. **Available Games**
+   - Quick Quiz (timed questions)
+   - Memory Game (word-definition matching)
+   - Crosswords (medical terms)
+   - Hangman (medical vocabulary)
+   - Word Search (find hidden terms)
 
-2. **Code Organization**
-   - Group related code using feature folders
-   - Keep consistent file structure within components
-   - Use index files for cleaner imports
+2. **Game Features**
+   - Difficulty Levels (1-3)
+   - Medical Specialties
+   - Points System
+   - Game Perks
+   - Progress Tracking
 
-3. **TypeScript Guidelines**
-   - Use proper type definitions
-   - Avoid any type when possible
-   - Document complex types
+3. **Word Management**
+   - Difficulty Rating
+   - Specialty Categories
+   - Active/Inactive Status
+   - Custom Vocabulary
 
-### Performance Considerations
-1. **State Management**
-   - Use computed properties for derived state
-   - Implement proper caching strategies
-   - Avoid unnecessary reactivity
+## Data Architecture
 
-2. **Component Optimization**
-   - Lazy load routes and heavy components
-   - Use v-show for frequently toggled elements
-   - Implement proper key usage in v-for directives
+### Firebase Collections
+1. **users**
+   - Profile Information
+   - Points Balance
+   - Premium Status
+   - Game Settings
 
-### Testing Guidelines
-1. **Test Organization**
-   - Mirror source file structure in tests
-   - Group tests by feature/functionality
-   - Separate unit and integration tests
+2. **payments**
+   - Transaction Records
+   - Payment Status
+   - Product Details
+   - PIX Information
 
-2. **Test Coverage**
-   - Maintain minimum 80% coverage
-   - Focus on business logic coverage
-   - Test edge cases and error scenarios
+3. **subscriptions**
+   - Premium Access Records
+   - Status History
+   - Payment Timeline
 
-## Implementation Roadmap
+### Client-Side Storage
+1. **LocalStorage**
+   - Dark Mode Preference
+   - Game Preferences
+   - Auth State
+   - Session Data
 
-### Phase 1: Store Refactoring
-1. Consolidate vocabulary and word stores
-2. Implement UI state store
-3. Refactor auth store
+2. **Store State**
+   - User Profile
+   - Points Balance
+   - Game Progress
+   - Payment Status
 
-### Phase 2: Component Restructuring
-1. Break down large components
-2. Implement base components
-3. Extract common functionality
+## Integration Points
 
-### Phase 3: Feature Improvements
-1. Enhance user settings management
-2. Implement proper error handling
-3. Add loading states
+### MercadoPago Flow
+1. **Payment Creation**
+   - Generate Payment Intent
+   - Create PIX QR Code
+   - Store Payment Record
 
-### Phase 4: Performance Optimization
-1. Implement proper caching
-2. Optimize component rendering
-3. Add proper lazy loading
+2. **Status Monitoring**
+   - Webhook Processing
+   - Status Polling
+   - User Notification
 
-## Code Review Guidelines
-1. Ensure changes follow project structure
-2. Verify proper store usage
-3. Check component organization
-4. Validate performance considerations
-5. Confirm proper error handling
+3. **Points Delivery**
+   - Atomic Updates
+   - Balance Validation
+   - Transaction Logging
 
-## Documentation Requirements
-1. Update component documentation
-2. Document store changes
-3. Maintain changelog
-4. Update API documentation
+### User Interactions
+1. **Authentication**
+   - Email/Password Login
+   - Email Verification
+   - Password Reset
+   - Profile Management
+
+2. **Game Progress**
+   - Score Tracking
+   - Points Awards
+   - Perk Usage
+   - Achievement System
+
+3. **Premium Features**
+   - Access Control
+   - Payment Processing
+   - Status Updates
+   - Feature Unlocking
