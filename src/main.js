@@ -2,7 +2,6 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import { createPinia } from 'pinia'
-import { useAuthStore } from './store/auth'
 import { useUIStore } from './store/ui/index'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import './assets/icons'
@@ -23,18 +22,8 @@ const initializeApp = async () => {
   // Set initial dark mode from localStorage before mount
   document.documentElement.classList.toggle('dark', uiStore.isDarkMode)
 
-  // Mount app immediately to show splash screen
+  // Mount app immediately
   app.mount('#app')
-  
-  // Initialize non-critical features in the background
-  requestIdleCallback(async () => {
-    try {
-      const authStore = useAuthStore()
-      await authStore.initializeAuth()
-    } catch (error) {
-      console.error('Auth initialization error:', error)
-    }
-  }, { timeout: 2000 }) // 2s timeout
 }
 
 // Initialize app with error boundary

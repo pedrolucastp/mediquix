@@ -37,57 +37,88 @@ const firebaseConfig = {
     measurementId: "G-Q35EFETSY8"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-auth.languageCode = 'pt';
+let app = null;
+let authInstance = null;
+let dbInstance = null;
+let analyticsInstance = null;
 
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log("Auth persistence set to local.");
-  })
-  .catch((error) => {
-    console.error("Error setting auth persistence:", error);
-  });
-
-isSupported()
-  .then((supported) => {
-    if (supported) {
-      getAnalytics(app);
-      console.log("Firebase Analytics initialized.");
-    } else {
-      console.warn("Firebase Analytics is not supported in this environment.");
-    }
-  })
-  .catch((error) => {
-    console.error("Erro ao inicializar o Analytics:", error);
-  });
-
-const db = getFirestore(app);
-
-const initAuthState = (callback) => {
-  return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log("User is logged in.");
-        callback(user);
-      } else {
-        console.log("No user is logged in.");
-        callback(null);
-      }
-      unsubscribe();
-      resolve();
+/**
+ * @function getApp
+ * @returns {FirebaseApp} Firebase app instance
+ */
+function getApp() {
+  if (!app) {
+    app = initializeApp({
+      ...firebaseConfig,
+      automaticDataCollectionEnabled: false
     });
-  });
-};
+  }
+  return app;
+}
+
+/**
+ * @function getOrInitAuth
+ * @returns {Auth} Firebase Auth instance
+ */
+function getOrInitAuth() {
+  if (!authInstance) {
+    authInstance = getAuth(getApp());
+    authInstance.languageCode = 'pt';
+  }
+  return authInstance;
+}
+
+/**
+ * @function getOrInitFirestore
+ * @description Only initializes Firestore if user is authenticated
+ * @returns {Firestore|null} Firestore instance or null if no user
+ */
+function getOrInitFirestore() {
+  const auth = getOrInitAuth();
+  if (!auth.currentUser) return null;
+  
+  if (!dbInstance) {
+    dbInstance = getFirestore(getApp());
+  }
+  return dbInstance;
+}
+
+/**
+ * @function setupAuthPersistence
+ * @description Sets up local persistence for auth after successful login
+ * @param {Auth} auth - The Firebase Auth instance
+ * @returns {Promise<void>}
+ */
+async function setupAuthPersistence(auth) {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    console.log("Auth persistence set to local.");
+  } catch (error) {
+    console.error("Error setting auth persistence:", error);
+    throw error;
+  }
+}
+
+/**
+ * @function getFirestoreDoc
+ * @description Gets a document reference, but only if user is authenticated
+ * @param {string} path - Path to the document
+ * @returns {DocumentReference|null} Document reference or null if no user
+ */
+function getFirestoreDoc(path) {
+  const db = getOrInitFirestore();
+  if (!db) return null;
+  return doc(db, path);
+}
 
 export {
-  auth,
-  db,
-  doc,
+  getOrInitAuth,
+  getOrInitFirestore,
+  setupAuthPersistence,
+  getFirestoreDoc as doc,
   getDoc,
   updateDoc,
   setDoc,
-  initAuthState,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,

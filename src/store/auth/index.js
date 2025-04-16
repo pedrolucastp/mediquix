@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import {
-  auth,
-  db,
+  getOrInitAuth,
+  setupAuthPersistence,
+  getOrInitFirestore,
   doc,
   setDoc,
   getDoc,
@@ -10,7 +11,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  initAuthState,
   sendEmailVerification,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
@@ -22,7 +22,6 @@ import { useUIStore } from '../ui/index';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
-  const initialized = ref(false);
   const settingsStore = useSettingsStore();
   const uiStore = useUIStore();
 
@@ -35,23 +34,11 @@ export const useAuthStore = defineStore('auth', () => {
   );
   const isPremium = computed(() => user.value?.settings?.isPremium || false);
 
-  // Actions
-  async function initializeAuth() {
-    return new Promise((resolve) => {
-      initAuthState((newUser) => {
-        user.value = newUser;
-        initialized.value = true;
-        if (newUser) {
-          fetchUserSettings();
-        }
-        resolve();
-      });
-    });
-  }
-
   async function login(email, password) {
     try {
       uiStore.setLoading('auth', true);
+      const auth = getOrInitAuth();
+      await setupAuthPersistence(auth);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       user.value = userCredential.user;
       
@@ -73,6 +60,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function signup(email, password) {
     try {
       uiStore.setLoading('auth', true);
+      const auth = getOrInitAuth();
+      
+      // Create user without persistence
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       user.value = userCredential.user;
 
@@ -89,10 +79,11 @@ export const useAuthStore = defineStore('auth', () => {
         premiumActivatedAt: null,
         emailVerified: false,
         points: 0,
-        freePoints: 10, // Start with 10 free points
+        freePoints: 100,
         lastFreePointsUpdate: new Date()
       };
 
+      const db = getOrInitFirestore();
       await setDoc(doc(db, "users", user.value.uid), defaultSettings);
       user.value.settings = defaultSettings;
       
@@ -101,8 +92,10 @@ export const useAuthStore = defineStore('auth', () => {
         defaultDifficulty: defaultSettings.default_difficulty
       });
 
-      // Sign out until email is verified
-      await logout();
+      // Sign out without persistence
+      await signOut(auth);
+      user.value = null;
+      settingsStore.resetToDefaults();
       uiStore.setSuccess('Please check your email to verify your account before logging in.');
     } catch (error) {
       uiStore.setError('auth', error.message);
@@ -120,12 +113,29 @@ export const useAuthStore = defineStore('auth', () => {
     uiStore.setSuccess('Verification email has been resent.');
   }
 
+  /**
+   * Delete the Firebase Auth IndexedDB database (firebaseLocalStorageDb)
+   * Called after logout to clear all local auth/session data
+   */
+  function deleteFirebaseAuthIndexedDB() {
+    return new Promise((resolve, reject) => {
+      const DB_NAME = 'firebaseLocalStorageDb';
+      const req = window.indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e);
+      req.onblocked = () => resolve(); // still resolve if blocked
+    });
+  }
+
   async function logout() {
     try {
       uiStore.setLoading('auth', true);
+      const auth = getOrInitAuth();
       await signOut(auth);
       user.value = null;
       settingsStore.resetToDefaults();
+      // Delete Firebase Auth IndexedDB after logout
+      await deleteFirebaseAuthIndexedDB();
     } catch (error) {
       uiStore.setError('auth', error.message);
       throw error;
@@ -137,6 +147,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserSettings() {
     try {
       uiStore.setLoading('userSettings', true);
+      const db = getOrInitFirestore();
       const userDocRef = doc(db, "users", user.value.uid);
       const docSnap = await getDoc(userDocRef);
 
@@ -185,6 +196,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateUserProfile(newSettings) {
     try {
       uiStore.setLoading('userSettings', true);
+      const db = getOrInitFirestore();
       const userDocRef = doc(db, "users", user.value.uid);
       
       const currentSettings = user.value.settings || {};
@@ -220,6 +232,7 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('Email é obrigatório');
       }
       uiStore.setLoading('auth', true);
+      const auth = getOrInitAuth();
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
       uiStore.setSuccess('Email enviado com instruções para redefinir sua senha.');
     } catch (error) {
@@ -232,6 +245,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function verifyResetCode(actionCode) {
     try {
+      const auth = getOrInitAuth();
       const email = await verifyPasswordResetCode(auth, actionCode);
       return email;
     } catch (error) {
@@ -242,6 +256,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function confirmPasswordChange(actionCode, newPassword) {
     try {
+      const auth = getOrInitAuth();
       await confirmPasswordReset(auth, actionCode, newPassword);
       uiStore.setSuccess('Senha alterada com sucesso! Você já pode fazer login.');
     } catch (error) {
@@ -252,13 +267,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
-    initialized,
     isAuthenticated,
     isEmailVerified,
     userProfile,
     username,
     isPremium,
-    initializeAuth,
     login,
     signup,
     logout,

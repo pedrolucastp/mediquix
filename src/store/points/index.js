@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useAuthStore } from '../auth';
 import { doc, updateDoc, getDoc, increment } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { getOrInitFirestore } from '@/firebase';
 import { useUIStore } from '../ui';
 
 /**
@@ -23,7 +23,7 @@ export const usePointsStore = defineStore('points', () => {
 
   const totalPoints = computed(() => points.value + freePoints.value);
   const canClaimFreePoints = computed(() => {
-    if (!lastFreePointsUpdate.value) return true;
+    if (!lastFreePointsUpdate.value || !authStore.isAuthenticated) return false;
     const now = new Date();
     const last = lastFreePointsUpdate.value.toDate();
     return now - last >= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -34,9 +34,13 @@ export const usePointsStore = defineStore('points', () => {
    * @description Loads user points from Firestore
    */
   async function initializePoints() {
-    if (!authStore.user?.uid) return;
+    if (!authStore.isAuthenticated) return;
+
     try {
       uiStore.setLoading('points', true);
+      const db = getOrInitFirestore();
+      if (!db) return;
+
       const userDoc = await getDoc(doc(db, 'users', authStore.user.uid));
       const userData = userDoc.data();
       points.value = userData.points || 0;
@@ -58,7 +62,11 @@ export const usePointsStore = defineStore('points', () => {
    * @throws {Error} On failure
    */
   async function addPoints(amount, isFree = false) {
-    if (!authStore.user?.uid) return;
+    if (!authStore.isAuthenticated) return;
+    
+    const db = getOrInitFirestore();
+    if (!db) return;
+
     const userRef = doc(db, 'users', authStore.user.uid);
     const field = isFree ? 'freePoints' : 'points';
     try {
@@ -87,10 +95,16 @@ export const usePointsStore = defineStore('points', () => {
    * @throws {Error} On failure or insufficient points
    */
   async function usePoints(amount) {
+    if (!authStore.isAuthenticated) return;
+
     if (totalPoints.value < amount) {
       uiStore.setError('points', 'Pontos insuficientes');
       throw new Error('Insufficient points');
     }
+
+    const db = getOrInitFirestore();
+    if (!db) return;
+
     let remainingAmount = amount;
     try {
       uiStore.setLoading('points', true);
@@ -126,10 +140,16 @@ export const usePointsStore = defineStore('points', () => {
    * @throws {Error} If not available or on failure
    */
   async function claimDailyPoints() {
+    if (!authStore.isAuthenticated) return;
+    
     if (!canClaimFreePoints.value) {
       uiStore.setError('points', 'Pontos diários não disponíveis ainda');
       throw new Error('Daily points not available yet');
     }
+
+    const db = getOrInitFirestore();
+    if (!db) return;
+
     const userRef = doc(db, 'users', authStore.user.uid);
     try {
       uiStore.setLoading('points', true);
@@ -149,7 +169,8 @@ export const usePointsStore = defineStore('points', () => {
     }
   }
 
-  if (authStore.user) {
+  // Only initialize points if user is already authenticated
+  if (authStore.isAuthenticated) {
     initializePoints();
   }
 

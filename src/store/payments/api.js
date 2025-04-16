@@ -1,8 +1,9 @@
-import { auth } from '@/firebase';
+import { getOrInitAuth } from '@/firebase';
 
 const API_BASE_URL = 'https://api-3jnfwp2o6q-uc.a.run.app';
 
 async function getAuthHeader() {
+  const auth = getOrInitAuth();
   if (!auth.currentUser) {
     throw new Error('User must be logged in to perform this action');
   }
