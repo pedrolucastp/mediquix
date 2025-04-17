@@ -137,7 +137,7 @@ watch(() => showModal.value, (newVal) => {
 <style scoped>
 .selectors-container {
   position: relative;
-  z-index: 100;
+  /* z-index: 100; */
 }
 
 .filters-button {

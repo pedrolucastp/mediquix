@@ -174,5 +174,6 @@ watch(() => authStore.isAuthenticated, (newVal) => {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+  width: 100%;
 }
 </style>

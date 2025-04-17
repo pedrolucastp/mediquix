@@ -639,9 +639,10 @@ onMounted(() => {
   /* gap: 1px; */
   background-color: var(--border-color);
   /* padding: 1px; */
-  border-radius: var(--radius-sm);
+  /* border-radius: var(--radius-sm); */
   width: fit-content;
   margin: 20px auto;
+  border: 2px solid;
 }
 
 .cell {
@@ -809,24 +810,20 @@ onMounted(() => {
   .game-container {
     flex-direction: column;
     padding: 1rem;
-    overflow: visible;
+    overflow-y: visible;
     overflow-x: clip;
   }
 
   .word-search-game-panel {
-    /* width: 300px; */
-    /* min-width: 300px; */
     width: 100%;
   }
 
   .game-grid-container {
-    overflow: visible;
-
+    overflow-y: visible;
   }
 
   .word-list {
     flex-direction: column;
-    /* flex-wrap: nowrap; */
   }
 
   .cell {

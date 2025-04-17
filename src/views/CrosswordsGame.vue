@@ -1,7 +1,7 @@
 <template>
   <div class="crosswords-game">
-    <GamePerksMenu :availablePerks="['hint', 'extra_time', 'skip']" @perk-activated="handlePerk" />
     <div id="crossword-container">
+
       <div id="crossword" :style="gridStyle">
         <template v-for="row in gridRows" :key="row">
           <div v-for="col in gridCols" :key="`${row}-${col}`" class="cell" :class="{ empty: !getCell(row, col) }"
@@ -21,11 +21,9 @@
 
       <div id="clues">
         <h1>Palavras Cruzadas</h1>
+        <GamePerksMenu :availablePerks="['hint', 'extra_time', 'skip']" @perk-activated="handlePerk" />
         <SelectorsComponent @specialty-change="startGame(true)" @difficulty-change="startGame(true)" />
-        <div class="button-container">
-          <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
-          <button id="new-game-button" @click="startGame(true)">Novo Jogo</button>
-        </div>
+
         <ul id="clue-list" :style="{ display: isLoading ? 'none' : 'block' }">
           <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
             @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}` }" :title="word.word">
@@ -34,7 +32,13 @@
           </li>
         </ul>
       </div>
+
+      <div class="button-container">
+        <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
+        <button id="new-game-button" @click="startGame(true)">Novo Jogo</button>
+      </div>
     </div>
+    
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-message">
         <p>Gerando palavras cruzadas...</p>
@@ -157,7 +161,7 @@ function getHighlightedCellBorder(row, col) {
   cellWords.forEach(word => {
     const positions = word.positions.map(pos => `${pos.row}-${pos.col}`);
     const isHighlightedWord = positions.some(pos => highlightedCells.value.has(pos));
-    
+
     if (isHighlightedWord) {
       styles.backgroundColor = 'rgba(255, 255, 0, 0.1)';
       if (word.direction === 'across') {
@@ -182,7 +186,7 @@ function getHighlightedCellBorder(row, col) {
   cellWords.forEach(word => {
     const positions = word.positions.map(pos => `${pos.row}-${pos.col}`);
     const isHighlightedWord = positions.some(pos => highlightedCells.value.has(pos));
-    
+
     if (isHighlightedWord) {
       if (word.direction === 'across' && hasHighlightedHorizontal) {
         if (positions[0] === `${row}-${col}`) {
@@ -254,7 +258,7 @@ function handleCellClick(row, col) {
     lastClickedCell.value.wordIndex = (lastClickedCell.value.wordIndex + 1) % cellWords.length
   }
 
-  const selectedWord = placedWords.value.find(w => 
+  const selectedWord = placedWords.value.find(w =>
     w.number === cellWords[lastClickedCell.value.wordIndex].wordNumber
   )
 
@@ -722,7 +726,7 @@ async function startGame(force = false) {
   if (!force && !isInitialLoad.value) {
     return
   }
-  
+
   try {
     isLoading.value = true
     const words = vocabularyStore.filteredWords

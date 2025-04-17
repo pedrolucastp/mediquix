@@ -3,7 +3,6 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'url'
 import compression from 'vite-plugin-compression'
-import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig({
   plugins: [
@@ -15,12 +14,6 @@ export default defineConfig({
     compression({
       algorithm: 'brotliCompress',
       ext: '.br'
-    }),
-    visualizer({
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-      filename: 'stats.html'
     }),
     VitePWA({
       registerType: 'autoUpdate',
@@ -75,19 +68,9 @@ export default defineConfig({
     })
   ],
   build: {
-    target: 'esnext',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'fontawesome': ['@fortawesome/vue-fontawesome', '@fortawesome/fontawesome-svg-core']
-        }
-      }
-    },
-    chunkSizeWarningLimit: 1000,
+    outDir: 'dist',
+    emptyOutDir: true,
     sourcemap: true,
-    reportCompressedSize: true,
     minify: 'terser',
     terserOptions: {
       compress: {
