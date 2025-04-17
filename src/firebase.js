@@ -102,13 +102,38 @@ async function setupAuthPersistence(auth) {
 /**
  * @function getFirestoreDoc
  * @description Gets a document reference, but only if user is authenticated
- * @param {string} path - Path to the document
- * @returns {DocumentReference|null} Document reference or null if no user
+ * @param {...string} pathSegments - The document path segments
+ * @returns {DocumentReference} Document reference
+ * @throws {Error} If database is not initialized or path is invalid
  */
-function getFirestoreDoc(path) {
+function getFirestoreDoc(...pathSegments) {
+  console.log('[getFirestoreDoc] Input segments:', pathSegments);
+  
   const db = getOrInitFirestore();
-  if (!db) return null;
-  return doc(db, path);
+  if (!db) {
+    throw new Error('Firestore is not initialized - user may not be authenticated');
+  }
+
+  if (!pathSegments || pathSegments.length === 0) {
+    throw new Error('Invalid document path provided - no path segments');
+  }
+
+  // Handle array input
+  if (pathSegments.length === 1 && Array.isArray(pathSegments[0])) {
+    pathSegments = pathSegments[0];
+  }
+
+  // Ensure all segments are strings and filter out any non-string values
+  const validSegments = pathSegments.filter(segment => 
+    segment && typeof segment === 'string' && segment.length > 0
+  );
+
+  if (validSegments.length === 0) {
+    throw new Error('Invalid document path provided - no valid segments');
+  }
+
+  console.log('[getFirestoreDoc] Using segments:', validSegments);
+  return doc(db, ...validSegments);
 }
 
 export {

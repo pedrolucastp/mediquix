@@ -84,7 +84,8 @@ export const useAuthStore = defineStore('auth', () => {
       };
 
       const db = getOrInitFirestore();
-      await setDoc(doc(db, "users", user.value.uid), defaultSettings);
+      const userId = String(user.value.uid);
+      await setDoc(doc(db, "users", userId), defaultSettings);
       user.value.settings = defaultSettings;
       
       settingsStore.setDefaultPreferences({
@@ -147,8 +148,21 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserSettings() {
     try {
       uiStore.setLoading('userSettings', true);
-      const db = getOrInitFirestore();
-      const userDocRef = doc(db, "users", user.value.uid);
+      console.log('[fetchUserSettings] User value:', {
+        user: user.value,
+        uid: user.value?.uid,
+        uidType: typeof user.value?.uid
+      });
+      
+      if (!user.value?.uid) {
+        throw new Error('User must be authenticated to fetch settings');
+      }
+
+      // Get user ID as string
+      const userId = String(user.value.uid);
+      
+      // We don't need to get db instance explicitly since our doc wrapper handles it
+      const userDocRef = doc('users', userId);
       const docSnap = await getDoc(userDocRef);
 
       if (docSnap.exists()) {
@@ -184,10 +198,13 @@ export const useAuthStore = defineStore('auth', () => {
           defaultSpecialty: mergedSettings.default_speciality,
           defaultDifficulty: mergedSettings.default_difficulty
         });
+      } else {
+        throw new Error('User settings document not found');
       }
     } catch (error) {
-      uiStore.setError('userSettings', error.message);
       console.error("Error fetching user settings:", error);
+      uiStore.setError('userSettings', error.message);
+      throw error;
     } finally {
       uiStore.setLoading('userSettings', false);
     }
@@ -196,8 +213,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateUserProfile(newSettings) {
     try {
       uiStore.setLoading('userSettings', true);
-      const db = getOrInitFirestore();
-      const userDocRef = doc(db, "users", user.value.uid);
+      
+      if (!user.value?.uid) {
+        throw new Error('User must be authenticated to update settings');
+      }
+
+      const userId = String(user.value.uid);
+      const userDocRef = doc('users', userId);
       
       const currentSettings = user.value.settings || {};
       const updatedSettings = {

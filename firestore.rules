@@ -28,28 +28,29 @@ service cloud.firestore {
     }
 
     /**
-     * @function validateUser
-     * @param {map} data - User document data
-     * @returns {bool} True if user data is valid
+     * @function validateUserWrite
+     * @param {map} data - User document data for write operations
+     * @returns {bool} True if user data is valid for write
      */
-    function validateUser(data) {
-      return data.keys().hasAll(['username', 'email', 'custom_vocabulary', 'default_difficulty', 'default_speciality', 'isPremium', 'premiumActivatedAt', 'points', 'freePoints', 'lastFreePointsUpdate'])
+    function validateUserWrite(data) {
+      return data.keys().hasAll(['username', 'email'])
         && isValidString(data.username, 3, 30)
         && isValidString(data.email, 5, 100)
         && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
-        && data.default_difficulty is number
-        && data.default_speciality is number
-        && ((data.default_difficulty == -1) || (data.default_difficulty >= 1 && data.default_difficulty <= 3))
-        && ((data.default_speciality == -1) || (data.default_speciality >= 0 && data.default_speciality < 30))
-        && data.custom_vocabulary is list
-        && data.custom_vocabulary.size() <= 1500
-        && data.isPremium is bool
-        && data.points is number
-        && data.points >= 0
-        && data.freePoints is number
-        && data.freePoints >= 0
-        && (data.lastFreePointsUpdate == null || data.lastFreePointsUpdate is timestamp)
-        && (data.premiumActivatedAt == null || data.premiumActivatedAt is timestamp);
+        && (data.default_difficulty == null || 
+            ((data.default_difficulty == -1) || 
+             (data.default_difficulty >= 1 && data.default_difficulty <= 3)))
+        && (data.default_speciality == null || 
+            ((data.default_speciality == -1) || 
+             (data.default_speciality >= 0 && data.default_speciality < 30)))
+        && (!('custom_vocabulary' in data) || 
+            (data.custom_vocabulary is list && 
+             data.custom_vocabulary.size() <= 1500))
+        && (!('isPremium' in data) || data.isPremium is bool)
+        && (!('points' in data) || (data.points is number && data.points >= 0))
+        && (!('freePoints' in data) || (data.freePoints is number && data.freePoints >= 0))
+        && (!('lastFreePointsUpdate' in data) || data.lastFreePointsUpdate is timestamp)
+        && (!('premiumActivatedAt' in data) || data.premiumActivatedAt is timestamp);
     }
 
     /**
@@ -59,26 +60,30 @@ service cloud.firestore {
      * @returns {bool} True if points/freePoints mutation is valid (atomic, small delta)
      */
     function validatePointsMutation(request, resource) {
-      return (
-        (request.points == resource.points || abs(request.points - resource.points) <= 100)
-        && (request.freePoints == resource.freePoints || abs(request.freePoints - resource.freePoints) <= 100)
-      );
+      return (!('points' in request && 'points' in resource) || 
+              (request.points == resource.points || abs(request.points - resource.points) <= 100))
+        && (!('freePoints' in request && 'freePoints' in resource) || 
+            (request.freePoints == resource.freePoints || abs(request.freePoints - resource.freePoints) <= 100));
     }
 
     // Allow users to read and write only their own data
     match /users/{userId} {
-      allow create: if request.auth != null 
-                   && request.auth.uid == userId
-                   && validateUser(request.resource.data);
-      
+      // Allow read if authenticated and it's their own data
       allow read: if request.auth != null 
                   && request.auth.uid == userId;
       
+      // Allow create with validation
+      allow create: if request.auth != null 
+                   && request.auth.uid == userId
+                   && validateUserWrite(request.resource.data);
+      
+      // Allow update with validation
       allow update: if request.auth != null 
                     && request.auth.uid == userId
-                    && validateUser(request.resource.data)
+                    && validateUserWrite(request.resource.data)
                     && validatePointsMutation(request.resource.data, resource.data);
       
+      // Allow delete of own data
       allow delete: if request.auth != null 
                     && request.auth.uid == userId;
     }
