@@ -21,10 +21,25 @@ import {
 } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// Action code settings for password reset using dynamic URL
+
+// Action code settings for password reset using the app URL
 const actionCodeSettings = {
-  url: `${window.location.origin}/auth/action`,
-  handleCodeInApp: true
+  // This must be true for handling password reset within the app
+  handleCodeInApp: true,
+  // URL must be authorized in Firebase Console
+  url: window.location.origin + '/auth/action',
+  // If using iOS
+  iOS: {
+    bundleId: 'com.mediquix-fbc0b.app'
+  },
+  // If using Android
+  android: {
+    packageName: 'com.mediquix-fbc0b.app',
+    installApp: true,
+    minimumVersion: '1'
+  },
+  // Available languages
+  dynamicLinkDomain: 'mediquix.page.link'
 };
 
 const firebaseConfig = {

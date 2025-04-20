@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">mediquix</string>
     <string name="title_activity_main">mediquix</string>
-    <string name="package_name">com.mediquix.app</string>
-    <string name="custom_url_scheme">com.mediquix.app</string>
+    <string name="package_name">com.mediquix-fbc0b.app</string>
+    <string name="custom_url_scheme">com.mediquix-fbc0b.app</string>
 </resources>

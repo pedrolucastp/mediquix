@@ -38,6 +38,11 @@ const router = createRouter({
       path: '/crosswords',
       name: 'CrosswordsGame',
       component: () => import(/* webpackChunkName: "crosswords" */ '../views/CrosswordsGame.vue')
+    },
+    {
+      path: '/auth/action',
+      name: 'AuthAction',
+      component: () => import(/* webpackChunkName: "auth-action" */ '../components/auth/AuthAction.vue')
     }
   ],
   scrollBehavior(to, from, savedPosition) {
