@@ -1,61 +1,75 @@
 <template>
-  <div class="crosswords-game">
-    <div id="crossword-container">
+  <GameContainer
+    title="Palavras Cruzadas"
+    :gameInstructions="gameInstructions"
+    :loading="loading"
+    :score="score"
+    :availablePerks="['hint', 'extra_time', 'skip']"
+    @specialty-change="startGame(true)"
+    @difficulty-change="startGame(true)"
+    @use-perk="handlePerk"
+  >
+    <template #game-settings>
+      <BaseButton @click="startGame(true)">Novo Jogo</BaseButton>
+      <BaseButton @click="revealAnswers" variant="accent">Revelar Respostas</BaseButton>
+    </template>
 
-      <div id="crossword" :style="gridStyle">
-        <template v-for="row in gridRows" :key="row">
-          <div v-for="col in gridCols" :key="`${row}-${col}`" class="cell" :class="{ empty: !getCell(row, col) }"
-            :style="getCell(row, col) ? getHighlightedCellBorder(row, col) : {}">
-            <template v-if="getCell(row, col)">
-              <span v-if="isStartingCell(row, col)" class="clue-number">
-                {{ getWordNumber(row, col) }}
-              </span>
-              <input :id="`cell-${row}-${col}`" :ref="el => cellRefs[`${row}-${col}`] = el" maxLength="1"
-                :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
-                :style="{ backgroundColor: getCellColor(row, col) }" @input="handleInput"
-                @click="handleCellClick(row, col)" />
-            </template>
-          </div>
-        </template>
+    <div class="crosswords-game">
+      <div id="crossword-container">
+
+        <div id="crossword" :style="gridStyle">
+          <template v-for="row in gridRows" :key="row">
+            <div v-for="col in gridCols" :key="`${row}-${col}`" class="cell" :class="{ empty: !getCell(row, col) }"
+              :style="getCell(row, col) ? getHighlightedCellBorder(row, col) : {}">
+              <template v-if="getCell(row, col)">
+                <span v-if="isStartingCell(row, col)" class="clue-number">
+                  {{ getWordNumber(row, col) }}
+                </span>
+                <input :id="`cell-${row}-${col}`" :ref="el => cellRefs[`${row}-${col}`] = el" maxLength="1"
+                  :data-row="row" :data-col="col" :data-correct="getCell(row, col)" :data-words="getCellWords(row, col)"
+                  :style="{ backgroundColor: getCellColor(row, col) }" @input="handleInput"
+                  @click="handleCellClick(row, col)" />
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <div id="clues">
+          <ul id="clue-list" :style="{ display: isLoading ? 'none' : 'block' }">
+            <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
+              @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}` }" :title="word.word">
+              {{ word.number }}. {{ word.clue }}
+              ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
+            </li>
+          </ul>
+        </div>
       </div>
-
-      <div id="clues">
-        <h1>Palavras Cruzadas</h1>
-        <GamePerksMenu :availablePerks="['hint', 'extra_time', 'skip']" @perk-activated="handlePerk" />
-        <SelectorsComponent @specialty-change="startGame(true)" @difficulty-change="startGame(true)" />
-
-        <ul id="clue-list" :style="{ display: isLoading ? 'none' : 'block' }">
-          <li v-for="word in placedWords" :key="word.number" :class="{ 'highlighted': isClueHighlighted(word.number) }"
-            @click="highlightWord(word)" :style="{ borderBottom: `2px solid ${word.color}` }" :title="word.word">
-            {{ word.number }}. {{ word.clue }}
-            ({{ word.direction === 'across' ? 'Horizontal' : 'Vertical' }})
-          </li>
-        </ul>
-      </div>
-
-      <div class="button-container">
-        <button id="check-button" @click="checkAnswers">Verificar Respostas</button>
-        <button id="new-game-button" @click="startGame(true)">Novo Jogo</button>
+      
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-message">
+          <p>Gerando palavras cruzadas...</p>
+          <p>Tentativa {{ currentAttempt }} de {{ GAME_ATTEMPTS }}</p>
+        </div>
       </div>
     </div>
-    
-    <div v-if="isLoading" class="loading-overlay">
-      <div class="loading-message">
-        <p>Gerando palavras cruzadas...</p>
-        <p>Tentativa {{ currentAttempt }} de {{ GAME_ATTEMPTS }}</p>
-      </div>
-    </div>
-  </div>
+  </GameContainer>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useVocabularyStore } from '@/store/vocabulary'
-import SelectorsComponent from '@/components/SelectorsComponent.vue'
-import { useGamePoints } from '@/composables/useGamePoints';
-import GamePerksMenu from '@/components/game/GamePerksMenu.vue'
+import GameContainer from "@/components/game/GameContainer.vue"
+import BaseButton from "@/components/base/BaseButton.vue"
+import { useGamePoints } from '@/composables/useGamePoints'
 
-const { usePerk } = useGamePoints();
+const gameInstructions = `Complete as palavras cruzadas usando as dicas fornecidas.
+- Clique em uma célula para selecionar uma palavra
+- Use as dicas para descobrir as palavras
+- Clique em uma dica para destacar a palavra correspondente
+- Use a dica (perk) para revelar uma letra aleatória
+- Todas as palavras estão relacionadas à especialidade médica selecionada`
+
+const { usePerk, calculateGameScore } = useGamePoints();
 
 // Constants
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
@@ -89,6 +103,8 @@ const highlightedClue = ref(null)
 const cellRefs = reactive({})
 const isLoading = ref(false)
 const currentAttempt = ref(1)
+const loading = ref(false)
+const score = ref(0)
 
 // Stores
 const vocabularyStore = useVocabularyStore()
@@ -146,68 +162,41 @@ function getHighlightedCellBorder(row, col) {
     return word.positions.some(pos => pos.row === row && pos.col === col)
   })
 
-  if (cellWords.length === 0) return {};
+  if (cellWords.length === 0) return {}
 
-  // Initialize default border style
+  // Initialize styles with default border
   const styles = {
     border: '1px solid var(--dark-border-color)',
     backgroundColor: 'transparent'
-  };
-
-  let hasHighlightedHorizontal = false;
-  let hasHighlightedVertical = false;
-
-  // First pass: check if we have any highlighted words
-  cellWords.forEach(word => {
-    const positions = word.positions.map(pos => `${pos.row}-${pos.col}`);
-    const isHighlightedWord = positions.some(pos => highlightedCells.value.has(pos));
-
-    if (isHighlightedWord) {
-      styles.backgroundColor = 'rgba(255, 255, 0, 0.1)';
-      if (word.direction === 'across') {
-        hasHighlightedHorizontal = true;
-      } else {
-        hasHighlightedVertical = true;
-      }
-    }
-  });
-
-  // Second pass: apply borders based on direction
-  if (hasHighlightedHorizontal) {
-    styles.borderTop = '3px solid darkgrey';
-    styles.borderBottom = '3px solid darkgrey';
-  }
-  if (hasHighlightedVertical) {
-    styles.borderLeft = '3px solid darkgrey';
-    styles.borderRight = '3px solid darkgrey';
   }
 
-  // Third pass: handle edges
-  cellWords.forEach(word => {
-    const positions = word.positions.map(pos => `${pos.row}-${pos.col}`);
-    const isHighlightedWord = positions.some(pos => highlightedCells.value.has(pos));
+  // Find which word is currently highlighted (if any)
+  const highlightedWord = cellWords.find(word => 
+    word.positions.some(pos => highlightedCells.value.has(`${pos.row}-${pos.col}`))
+  )
 
-    if (isHighlightedWord) {
-      if (word.direction === 'across' && hasHighlightedHorizontal) {
-        if (positions[0] === `${row}-${col}`) {
-          styles.borderLeft = '3px solid darkgrey';
-        }
-        if (positions[positions.length - 1] === `${row}-${col}`) {
-          styles.borderRight = '3px solid darkgrey';
-        }
-      }
-      if (word.direction === 'down' && hasHighlightedVertical) {
-        if (positions[0] === `${row}-${col}`) {
-          styles.borderTop = '3px solid darkgrey';
-        }
-        if (positions[positions.length - 1] === `${row}-${col}`) {
-          styles.borderBottom = '3px solid darkgrey';
-        }
-      }
+  if (highlightedWord) {
+    styles.backgroundColor = 'rgba(255, 255, 0, 0.1)'
+
+    // Get the cell's position within the highlighted word
+    const cellIndex = highlightedWord.positions.findIndex(pos => pos.row === row && pos.col === col)
+    const isFirstCell = cellIndex === 0
+    const isLastCell = cellIndex === highlightedWord.positions.length - 1
+
+    if (highlightedWord.direction === 'across') {
+      styles.borderTop = '3px solid darkgrey'
+      styles.borderBottom = '3px solid darkgrey'
+      if (isFirstCell) styles.borderLeft = '3px solid darkgrey'
+      if (isLastCell) styles.borderRight = '3px solid darkgrey'
+    } else { // direction is 'down'
+      styles.borderLeft = '3px solid darkgrey'
+      styles.borderRight = '3px solid darkgrey'
+      if (isFirstCell) styles.borderTop = '3px solid darkgrey'
+      if (isLastCell) styles.borderBottom = '3px solid darkgrey'
     }
-  });
+  }
 
-  return styles;
+  return styles
 }
 
 function isStartingCell(row, col) {
@@ -381,30 +370,42 @@ function isInputPartOfCurrentWord(input) {
   }
 }
 
-function checkAnswers() {
-  let allCorrect = true
+// async function checkAnswers() {
+//   let allCorrect = true
+//   let correctAnswers = 0
+//   const totalAnswers = placedWords.value.length
 
-  for (const key in cellRefs) {
-    const input = cellRefs[key]
-    const userInput = normalizeString(input.value || '')
-    const correctInput = normalizeString(input.dataset.correct)
-    if (userInput === correctInput) {
-      input.style.backgroundColor = '#b2ffb2'
-    } else {
-      input.style.backgroundColor = '#ffb2b2'
-      input.value = input.dataset.correct // Show correct letter
-      input.style.color = '#FF0000' // Make incorrect answers red
-      allCorrect = false
-    }
-  }
+//   for (const key in cellRefs) {
+//     const input = cellRefs[key]
+//     const userInput = normalizeString(input.value || '')
+//     const correctInput = normalizeString(input.dataset.correct)
+//     if (userInput === correctInput) {
+//       input.style.backgroundColor = '#b2ffb2'
+//       correctAnswers++
+//     } else {
+//       input.style.backgroundColor = '#ffb2b2'
+//       input.value = input.dataset.correct // Show correct letter
+//       input.style.color = '#FF0000' // Make incorrect answers red
+//       allCorrect = false
+//     }
+//   }
 
-  if (allCorrect) {
-    alert('Parabéns! Você completou corretamente!')
-    startGame() // Start new game without level increment
-  } else {
-    console.log('Existem erros em suas respostas. As respostas corretas estão em vermelho.')
-  }
-}
+//   // Calculate score based on correct answers
+//   const newScore = calculateGameScore({
+//     correctAnswers,
+//     totalAnswers,
+//     isPerfect: allCorrect,
+//     timeBonus: 0 // Add time bonus logic if needed
+//   })
+//   score.value = newScore
+
+//   if (allCorrect) {
+//     alert('Parabéns! Você completou corretamente!')
+//     startGame() // Start new game without level increment
+//   } else {
+//     console.log('Existem erros em suas respostas. As respostas corretas estão em vermelho.')
+//   }
+// }
 
 function initializeGrid() {
   // Clear the grid array
@@ -729,6 +730,7 @@ async function startGame(force = false) {
 
   try {
     isLoading.value = true
+    loading.value = true
     const words = vocabularyStore.filteredWords
     const success = await generateCrossword(words)
 
@@ -739,6 +741,7 @@ async function startGame(force = false) {
     console.error('Error generating crossword:', error)
   } finally {
     isLoading.value = false
+    loading.value = false
     clearHighlights()
     isInitialLoad.value = false
   }
@@ -770,6 +773,23 @@ async function handlePerk(perkId) {
   } else if (perkId === 'skip') {
     // Placeholder: implement skip logic if/when skipping clues is supported
   }
+}
+
+/**
+ * @function revealAnswers
+ * @description Reveals all answers in the crossword grid and updates the score to 0.
+ */
+function revealAnswers() {
+  // Reveal all answers and mark them in red
+  for (const key in cellRefs) {
+    const input = cellRefs[key]
+    if (input && input.dataset.correct) {
+      input.value = input.dataset.correct
+      input.style.color = '#FF0000'
+    }
+  }
+  // Update the score to 0 since answers were revealed
+  score.value = 0
 }
 
 // Initialization
@@ -820,7 +840,7 @@ onMounted(() => {
   gap: 0;
   margin: 0;
   padding: 2rem 2rem 2rem 350px;
-  border-radius: var(--radius-md);
+  /* border-radius: var(--radius-md); */
   box-shadow: var(--shadow-md);
   overflow: auto;
   max-height: 80vh;
@@ -972,28 +992,7 @@ onMounted(() => {
 }
 
 .button-container {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  /* margin-top: 20px; */
-}
-
-#check-button,
-#new-game-button {
-  padding: 8px 20px;
-  font-size: 14px;
-  /* background-color: var(--primary-color); */
-  background: #eee;
-
-  /* color: #fff; */
-  /* border: none; */
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-#check-button:hover,
-#new-game-button:hover {
-  background-color: var(--accent-color);
+  display: none;
 }
 
 @media (max-width: 480px) {
