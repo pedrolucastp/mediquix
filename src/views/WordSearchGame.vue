@@ -1,24 +1,47 @@
 <template>
-  <div class="word-search-game">
-    <h1>Caça-Palavras</h1>
-    <SelectorsComponent @specialty-change="createGame" @difficulty-change="createGame" />
+  <GameContainer title="Caça-Palavras" :gameInstructions="gameInstructions" :loading="loading" :score="score"
+    :availablePerks="['hint']" @specialty-change="createGame" @difficulty-change="createGame">
+   
+    <template #game-settings>
+      <div class="game-settings">
+        <h3>Configurações da Grade</h3>
+        <div class="setting-group">
+          <label>Tamanho da Célula (16-40px)</label>
+          <input type="range" :min="16" :max="40" :value="cellSize" @input="handleCellSizeChange" />
+          <span>{{ cellSize }}px</span>
+        </div>
+        <div class="setting-group">
+          <label>Largura da Grade (10-40)</label>
+          <input type="range" :min="10" :max="40" :value="gridWidth" @input="handleGridWidthChange" />
+          <span>{{ gridWidth }}</span>
+        </div>
 
-    <GamePerksMenu :availablePerks="['hint']" @perk-activated="handlePerk" />
+        <div class="setting-group">
+          <label>Altura da Grade (8-20)</label>
+          <input type="range" :min="8" :max="20" :value="gridHeight" @input="handleGridHeightChange" />
+          <span>{{ gridHeight }}</span>
+        </div>
 
-    <div class="game-container">
-      <!-- Word list moved before grid for better mobile flow -->
-      <div class="word-search-game-panel">
-        <ul class="word-list">
-          <li v-for="wordObj in gameWords" :key="wordObj.word" :title="wordObj.word"
-            :class="{ found: foundWords.includes(wordObj.word.toUpperCase()) }">
-            <span>{{ wordObj.clue }}</span>
-          </li>
-        </ul>
+      </div>
+    </template>
 
+    <div class="game-content">
+      <div class="word-search-game-panel" :class="{ 'panel-collapsed': !isWordListExpanded }">
+        <button class="toggle-panel-button" @click="toggleWordList">
+          <font-awesome-icon :icon="isWordListExpanded ? 'chevron-up' : 'chevron-down'" />
+          {{ isWordListExpanded ? 'Ocultar Palavras' : 'Mostrar Palavras' }}
+        </button>
+        <transition name="slide">
+          <ul v-show="isWordListExpanded" class="word-list">
+            <li v-for="wordObj in gameWords" :key="wordObj.word" :title="wordObj.word"
+              :class="{ found: foundWords.includes(wordObj.word.toUpperCase()) }">
+              <span>{{ wordObj.clue }}</span>
+            </li>
+          </ul>
+        </transition>
       </div>
 
       <div class="game-grid-container">
-
         <div class="game-grid" ref="gameGrid" :style="gridStyle">
           <div v-for="(row, rowIndex) in grid" :key="rowIndex" class="grid-row">
             <div v-for="(cell, colIndex) in row" :key="colIndex" class="cell" :class="{
@@ -30,42 +53,33 @@
           </div>
         </div>
       </div>
-      
-    </div>
-    <div class="grid-controls">
-        <div class="control-group">
-          <label>Altura da grade: {{ gridWidth }}</label>
-          <input type="range" :value="gridWidth" min="10" max="40" step="1" @input="handleGridWidthChange" />
-        </div>
-        <div class="control-group">
-          <label>Largura da grade: {{ gridHeight }}</label>
-          <input type="range" :value="gridHeight" min="8" max="20" step="1" @input="handleGridHeightChange" />
-        </div>
-        <div class="control-group">
-          <label>Tamanho da célula: {{ cellSize }}</label>
-          <input type="range" :value="cellSize" min="16" max="40" step="2" @input="handleCellSizeChange" />
-        </div>
-      </div>
-    <p class="status">{{ statusMessage }}</p>
 
-    <div v-if="allWordsFound" class="completion-message">
-      <h3>Parabéns!</h3>
-      <p>Você encontrou todas as palavras!</p>
-      <p>Pontos ganhos: {{ pointsEarned }}</p>
-      <BaseButton variant="primary" @click="createGame">Novo Jogo</BaseButton>
+      <p class="status">{{ statusMessage }}</p>
+
+      <div v-if="allWordsFound" class="completion-message">
+        <h3>Parabéns!</h3>
+        <p>Você encontrou todas as palavras!</p>
+        <p>Pontos ganhos: {{ pointsEarned }}</p>
+        <BaseButton variant="primary" @click="createGame">Novo Jogo</BaseButton>
+      </div>
     </div>
-  </div>
+  </GameContainer>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from "vue";
+import GameContainer from "@/components/game/GameContainer.vue";
 import { useVocabularyStore } from "@/store/vocabulary";
 import { useSettingsStore } from "@/store/settings";
-import SelectorsComponent from "@/components/SelectorsComponent.vue";
-import { useGamePoints } from '@/composables/useGamePoints';
-import GamePerksMenu from '../components/game/GamePerksMenu.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
+import { useGamePoints } from '@/composables/useGamePoints';
 
+const gameInstructions = `Encontre todas as palavras escondidas na grade! 
+As palavras podem estar na horizontal, vertical ou diagonal, em qualquer direção.
+Clique e arraste para selecionar uma palavra. Use a dica para revelar a localização de uma palavra.
+A lista de palavras mostra as definições que você precisa encontrar.`;
+
+const loading = ref(false);
 const settingsStore = useSettingsStore();
 const vocabularyStore = useVocabularyStore();
 
@@ -77,7 +91,6 @@ const gridStyle = computed(() => ({
   display: 'grid',
   gridTemplateColumns: `repeat(${gridHeight.value}, ${cellSize.value}px)`,
   gridTemplateRows: `repeat(${gridWidth.value}, ${cellSize.value}px)`,
-  // gap: '1px', no gap needed
   "--cell-size": `${cellSize.value}px`,
   width: 'fit-content',
   minWidth: 'min-content'
@@ -100,7 +113,6 @@ function handleGridHeightChange(e) {
 }
 
 function handleCellSizeChange(e) {
-  console.log('handleCellSizeChange', e)
   const size = parseInt(e.target.value);
   if (size >= 16 && size <= 40) {
     settingsStore.setWordSearchGridSize(gridWidth.value, gridHeight.value, size);
@@ -123,6 +135,12 @@ const allWordsFound = computed(() => {
     gameWords.value.every(word => foundWords.value.includes(word.word.toUpperCase()));
 });
 
+const isWordListExpanded = ref(true);
+
+function toggleWordList() {
+  isWordListExpanded.value = !isWordListExpanded.value;
+}
+
 function createGame() {
   score.value = 0;
   statusMessage.value = "";
@@ -130,7 +148,6 @@ function createGame() {
   foundWords.value = [];
   foundCells = reactive({});
 
-  // Initialize grid with correct dimensions
   const rows = parseInt(gridHeight.value);
   const cols = parseInt(gridWidth.value);
 
@@ -302,7 +319,6 @@ function placeWordAtPosition(word, startRow, startCol, direction) {
 
 function fillEmptyCells() {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  // Fix loop order to properly fill all cells
   for (let row = 0; row < gridHeight.value; row++) {
     for (let col = 0; col < gridWidth.value; col++) {
       if (grid.value[row][col] === "") {
@@ -444,7 +460,6 @@ function calculateGamePoints() {
 }
 
 async function handlePerk(perkId) {
-  // Always deduct points before applying perk effect
   const success = await usePerk(perkId);
   if (!success) return;
   if (perkId === 'hint') {
@@ -517,50 +532,129 @@ function resetSelection() {
 }
 
 onMounted(() => {
-  console.log('onMounted',
-    cellSize,
-    gridWidth,
-    gridHeight
-  );
   createGame();
 });
 
 </script>
 
 <style scoped>
-.word-search-game {
+.game-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.5rem;
-  height: 100%;
-  max-width: 100%;
-  overflow: hidden;
+  width: 100%;
 }
 
-.game-container {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
+.game-settings {
+  min-width: 300px;
+  padding: var(--spacing-md);
+}
+
+.game-settings h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-color);
+}
+
+.setting-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.setting-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-secondary);
+}
+
+.setting-group input[type="range"] {
   width: 100%;
-  padding: 0.5rem;
-  border-radius: var(--radius-md);
-  background-color: var(--surface-color);
-  box-shadow: var(--shadow-sm);
-  overflow: auto;
-  /* flex-wrap: wrap; */
 }
 
 .word-search-game-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  width: 30%;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.toggle-panel-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: fit-content;
+  margin: 0 auto;
+  margin-bottom: 0.5rem;
+  z-index: 2;
+}
+
+.toggle-panel-button:hover {
+  background: var(--hover-color);
+}
+
+.word-list {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  margin: 0;
+  list-style: none;
+  width: 100%;
+  background: var(--surface-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transform-origin: top center;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  margin: 0;
+  padding: 0;
+}
+
+.panel-collapsed {
+  margin-bottom: 1rem;
+}
+
+.word-list li {
+  flex: 1 1 calc(33.333% - 0.5rem);
+  min-width: 150px;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  text-align: left;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
 }
 
 .grid-controls {
   display: flex;
-  /* flex-direction: column; */
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem;
@@ -624,22 +718,15 @@ onMounted(() => {
 
 .game-grid-container {
   display: flex;
-  /* justify-content: center; */
-  /* align-items: center; */
   overflow: auto;
   width: 100%;
-  /* padding: 0.5rem; */
-  /* max-width: 100vw; */
   -webkit-overflow-scrolling: touch;
   flex-wrap: wrap;
 }
 
 .game-grid {
   display: grid;
-  /* gap: 1px; */
   background-color: var(--border-color);
-  /* padding: 1px; */
-  /* border-radius: var(--radius-sm); */
   width: fit-content;
   margin: 20px auto;
   border: 2px solid;
@@ -658,7 +745,7 @@ onMounted(() => {
   position: relative;
   transition: all 0.2s ease;
   font-weight: 600;
-  font-size: calc(var(--cell-size) * 0.4);
+  font-size: calc(var(--cell-size) * 0.6);
   touch-action: manipulation;
 }
 
@@ -705,16 +792,15 @@ onMounted(() => {
   background-color: var(--surface-color);
 }
 
-.word-list {
+/* .word-list {
   display: flex;
-  /* flex-wrap: wrap; */
   gap: 0.5rem;
   padding: 0.5rem;
   margin: 0;
   list-style: none;
   width: 100%;
   flex-direction: column;
-}
+} */
 
 .word-list li {
   flex: 1 1 calc(50% - 0.5rem);
@@ -750,7 +836,6 @@ onMounted(() => {
   border: 1px solid var(--border-color);
 }
 
-/* Dark mode support */
 :deep(.dark) .game-container {
   background-color: var(--dark-surface-color);
 }
@@ -800,6 +885,16 @@ onMounted(() => {
   background-color: var(--dark-surface-color);
 }
 
+:deep(.dark) .toggle-panel-button {
+  background-color: var(--dark-surface-color);
+  border-color: var(--dark-border-color);
+  color: var(--dark-text-color);
+}
+
+:deep(.dark) .toggle-panel-button:hover {
+  background-color: var(--dark-hover-color);
+}
+
 @media (max-width: 768px) {
   .word-search-game {
     padding: 1rem;
@@ -822,23 +917,15 @@ onMounted(() => {
     overflow-y: visible;
   }
 
-  .word-list {
-    flex-direction: column;
-  }
-
-  .cell {
-    font-size: calc(var(--cell-size) * 0.5);
-  }
-
-  .control-group label {
-    font-size: 0.8rem;
-  }
-
   .word-list li {
     flex: 1 1 100%;
     min-width: 0;
-    font-size: 0.85rem;
+    font-size: 1rem;
     padding: 0.4rem;
+  }
+
+  .toggle-panel-button {
+    width: 100%;
   }
 
   .status {

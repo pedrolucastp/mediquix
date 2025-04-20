@@ -1,73 +1,121 @@
 <template>
-  <div class="hangman-game">
-    <h1>Jogo da Forca</h1>
-    <SelectorsComponent @specialty-change="startGame" @difficulty-change="startGame" />
-    
-    <GamePerksMenu :availablePerks="['hint']" @perk-activated="handlePerk" />
-
-    <div class="game-container" v-show="gameStarted">
-      <!-- Figura da Forca -->
-      <div class="hangman-figure">
-        <svg height="250" width="200" id="hangman-svg">
-          <!-- Base da forca -->
-          <line x1="10" y1="240" x2="190" y2="240" stroke="#2c3e50" stroke-width="4" />
-          <line x1="60" y1="240" x2="60" y2="20" stroke="#2c3e50" stroke-width="4" />
-          <line x1="58" y1="20" x2="152" y2="20" stroke="#2c3e50" stroke-width="4" />
-          <line x1="150" y1="20" x2="150" y2="50" stroke="#2c3e50" stroke-width="4" />
-          <!-- Partes do boneco, controladas por v-show -->
-          <circle v-show="showHead" cx="150" cy="70" r="20" stroke="#2c3e50" stroke-width="4" fill="none" />
-          <line v-show="showBody" x1="150" y1="90" x2="150" y2="150" stroke="#2c3e50" stroke-width="4" />
-          <line v-show="showLeftArm" x1="150" y1="120" x2="120" y2="100" stroke="#2c3e50" stroke-width="4" />
-          <line v-show="showRightArm" x1="150" y1="120" x2="180" y2="100" stroke="#2c3e50" stroke-width="4" />
-          <line v-show="showLeftLeg" x1="150" y1="150" x2="120" y2="180" stroke="#2c3e50" stroke-width="4" />
-          <line v-show="showRightLeg" x1="150" y1="150" x2="180" y2="180" stroke="#2c3e50" stroke-width="4" />
-        </svg>
+  <GameContainer
+    title="Jogo da Forca"
+    :gameInstructions="gameInstructions"
+    :loading="loading"
+    :score="score"
+    :availablePerks="['hint']"
+    @specialty-change="startGame"
+    @difficulty-change="startGame"
+  >
+    <template #game-settings>
+      <div class="game-settings">
+        <h3>Configurações</h3>
+        <div class="setting-group">
+          <label>Número de vidas: {{ lives }}</label>
+          <input type="range" :value="maxLives" min="4" max="10" step="1" @input="handleLivesChange" />
+          <p class="setting-description">Quantidade de tentativas antes de perder o jogo</p>
+        </div>
       </div>
-      
-      <div class="message-container">
-        <p>{{ message }}</p>
-      </div>
+    </template>
 
-      <div class="word-container">
-        <span v-for="(letter, index) in displayedWord" :key="index" class="letter">
-          {{ letter }}
-        </span>
-      </div>
+    <div class="game-content">
+      <div class="game-container" v-show="gameStarted">
+        <!-- Figura da Forca -->
+        <div class="hangman-figure">
+          <svg height="250" width="200" id="hangman-svg">
+            <!-- Base da forca -->
+            <line x1="10" y1="240" x2="190" y2="240" stroke="#2c3e50" stroke-width="4" />
+            <line x1="60" y1="240" x2="60" y2="20" stroke="#2c3e50" stroke-width="4" />
+            <line x1="58" y1="20" x2="152" y2="20" stroke="#2c3e50" stroke-width="4" />
+            <line x1="150" y1="20" x2="150" y2="50" stroke="#2c3e50" stroke-width="4" />
+            <!-- Partes do boneco, controladas por v-show -->
+            <circle v-show="showHead" cx="150" cy="70" r="20" stroke="#2c3e50" stroke-width="4" fill="none" />
+            <!-- Facial features -->
+            <g v-show="showLeftEye">
+              <!-- Normal eye or X eye based on game state -->
+              <circle v-if="!gameOver || won" cx="143" cy="65" r="3" stroke="#2c3e50" stroke-width="2" fill="#2c3e50" />
+              <g v-else>
+                <line x1="140" y1="62" x2="146" y2="68" stroke="#2c3e50" stroke-width="2" />
+                <line x1="146" y1="62" x2="140" y2="68" stroke="#2c3e50" stroke-width="2" />
+              </g>
+            </g>
+            <g v-show="showRightEye">
+              <!-- Normal eye or X eye based on game state -->
+              <circle v-if="!gameOver || won" cx="157" cy="65" r="3" stroke="#2c3e50" stroke-width="2" fill="#2c3e50" />
+              <g v-else>
+                <line x1="154" y1="62" x2="160" y2="68" stroke="#2c3e50" stroke-width="2" />
+                <line x1="160" y1="62" x2="154" y2="68" stroke="#2c3e50" stroke-width="2" />
+              </g>
+            </g>
+            <line v-show="showNose" x1="150" y1="65" x2="150" y2="75" stroke="#2c3e50" stroke-width="2" />
+            <!-- Mouth changes based on game state -->
+            <g v-show="showMouth">
+              <path v-if="!gameOver || won" d="M142 78 Q150 83 158 78" stroke="#2c3e50" stroke-width="2" fill="none" />
+              <path v-else d="M142 82 Q150 77 158 82" stroke="#2c3e50" stroke-width="2" fill="none" />
+            </g>
+            <!-- Body parts -->
+            <line v-show="showBody" x1="150" y1="90" x2="150" y2="150" stroke="#2c3e50" stroke-width="4" />
+            <line v-show="showLeftArm" x1="150" y1="120" x2="120" y2="100" stroke="#2c3e50" stroke-width="4" />
+            <line v-show="showRightArm" x1="150" y1="120" x2="180" y2="100" stroke="#2c3e50" stroke-width="4" />
+            <line v-show="showLeftLeg" x1="150" y1="150" x2="120" y2="180" stroke="#2c3e50" stroke-width="4" />
+            <line v-show="showRightLeg" x1="150" y1="150" x2="180" y2="180" stroke="#2c3e50" stroke-width="4" />
+          </svg>
+        </div>
+        
+        <div class="message-container">
+          <p>{{ message }}</p>
+        </div>
 
-      <div class="clue-container">
-        <p>{{ currentWord?.clue }}</p>
-      </div>
+        <div class="word-container">
+          <span v-for="(letter, index) in displayedWord" :key="index" class="letter">
+            {{ letter }}
+          </span>
+        </div>
 
-      <div class="guess-container">
-        <input 
-          type="text" 
-          v-model="guess" 
-          @keyup.enter="makeGuess"
-          maxlength="1"
-          :disabled="gameOver"
-        />
-        <button @click="makeGuess" :disabled="gameOver">Tentar</button>
-      </div>
+        <div class="clue-container">
+          <p>{{ currentWord?.clue }}</p>
+        </div>
 
-      <button id="restart-btn" v-show="showRestart" @click="startGame">Novo Jogo</button>
+        <div class="guess-container">
+          <input 
+            type="text" 
+            v-model="guess" 
+            @keyup.enter="makeGuess"
+            maxlength="1"
+            :disabled="gameOver"
+          />
+          <button @click="makeGuess" :disabled="gameOver">Tentar</button>
+        </div>
 
-      <!-- Show points earned when game ends -->
-      <div v-if="gameOver" class="completion-message">
-        <p v-if="won">Parabéns! Você venceu!</p>
-        <p v-else>Não foi dessa vez. A palavra era: {{ currentWord?.word }}</p>
-        <p v-if="pointsEarned">Pontos ganhos: {{ pointsEarned }}</p>
+        <button id="restart-btn" v-show="showRestart" @click="startGame">Novo Jogo</button>
+
+        <!-- Show points earned when game ends -->
+        <div v-if="gameOver" class="completion-message">
+          <p v-if="won">Parabéns! Você venceu!</p>
+          <p v-else>Não foi dessa vez. A palavra era: {{ currentWord?.word }}</p>
+          <p v-if="pointsEarned">Pontos ganhos: {{ pointsEarned }}</p>
+        </div>
       </div>
     </div>
-  </div>
+  </GameContainer>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import SelectorsComponent from '@/components/SelectorsComponent.vue';
-import GamePerksMenu from '@/components/game/GamePerksMenu.vue';
+import GameContainer from "@/components/game/GameContainer.vue";
+import GameMenuBar from '@/components/game/GameMenuBar.vue';
 import { useVocabularyStore } from '@/store/vocabulary';
 import { useGamePoints } from '@/composables/useGamePoints';
 
+const gameInstructions = `Adivinhe a palavra secreta antes que o boneco seja completado!
+- Digite uma letra e pressione Enter ou clique em "Tentar"
+- Você tem um número limitado de tentativas antes de perder
+- Use a dica para revelar uma letra da palavra
+- Preste atenção na dica fornecida abaixo da palavra`;
+
+const loading = ref(false);
+const score = ref(0);
 const vocabularyStore = useVocabularyStore();
 const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
 
@@ -78,26 +126,88 @@ const guess = ref('');
 const message = ref('');
 const gameStarted = ref(false);
 const showRestart = ref(false);
-const maxLives = 6;
-const lives = ref(maxLives);
+const maxLives = ref(10); // Aumentado para 10 vidas
+const lives = ref(maxLives.value);
 const gameOver = ref(false);
 const won = ref(false);
 const pointsEarned = ref(0);
 
 // Computed properties para partes da figura da forca
-const showHead = computed(() => lives.value < 6);
-const showBody = computed(() => lives.value < 5);
-const showLeftArm = computed(() => lives.value < 4);
-const showRightArm = computed(() => lives.value < 3);
-const showLeftLeg = computed(() => lives.value < 2);
-const showRightLeg = computed(() => lives.value < 1);
+function getFeatureVisibility(feature) {
+  const totalMistakes = maxLives.value - lives.value;
+  const livesConfig = {
+    10: {
+      head: 1, body: 2, leftArm: 3, rightArm: 4, leftLeg: 5, rightLeg: 6,
+      mouth: 7, leftEye: 8, rightEye: 9, nose: 10
+    },
+    9: {
+      head: 1, body: 2, leftArm: 3, rightArm: 4, leftLeg: 5, rightLeg: 6,
+      mouth: 7, leftEye: 8, rightEye: 8, nose: 9
+    },
+    8: {
+      head: 1, body: 2, leftArm: 3, rightArm: 4, leftLeg: 5, rightLeg: 6,
+      mouth: 7, leftEye: 7, rightEye: 7, nose: 8
+    },
+    7: {
+      head: 1, body: 3, leftArm: 4, rightArm: 5, leftLeg: 6, rightLeg: 7,
+      mouth: 2, leftEye: 2, rightEye: 2, nose: 2
+    },
+    6: {
+      head: 1, body: 2, leftArm: 3, rightArm: 4, leftLeg: 5, rightLeg: 6,
+      mouth: 1, leftEye: 1, rightEye: 1, nose: 1
+    },
+    5: {
+      head: 1, body: 3, leftArm: 4, rightArm: 4, leftLeg: 5, rightLeg: 5,
+      mouth: 2, leftEye: 2, rightEye: 2, nose: 2
+    },
+    4: {
+      head: 1, body: 2, leftArm: 3, rightArm: 3, leftLeg: 4, rightLeg: 4,
+      mouth: 1, leftEye: 1, rightEye: 1, nose: 1
+    }
+  };
 
+  const config = livesConfig[maxLives.value] || livesConfig[6]; // Default to 6 lives config if invalid
+  return totalMistakes >= config[feature];
+}
+
+const showHead = computed(() => getFeatureVisibility('head'));
+const showBody = computed(() => getFeatureVisibility('body'));
+const showLeftArm = computed(() => getFeatureVisibility('leftArm'));
+const showRightArm = computed(() => getFeatureVisibility('rightArm'));
+const showLeftLeg = computed(() => getFeatureVisibility('leftLeg'));
+const showRightLeg = computed(() => getFeatureVisibility('rightLeg'));
+const showMouth = computed(() => {
+  if (gameOver.value && !won.value) {
+    return getFeatureVisibility('mouth');
+  }
+  return getFeatureVisibility('mouth');
+});
+const showLeftEye = computed(() => {
+  if (gameOver.value && !won.value) {
+    return getFeatureVisibility('leftEye');
+  }
+  return getFeatureVisibility('leftEye');
+});
+const showRightEye = computed(() => {
+  if (gameOver.value && !won.value) {
+    return getFeatureVisibility('rightEye');
+  }
+  return getFeatureVisibility('rightEye');
+});
+const showNose = computed(() => getFeatureVisibility('nose'));
+
+// Display da palavra atual com letras adivinhadas
 const displayedWord = computed(() => {
   if (!currentWord.value) return [];
   return currentWord.value.word.split('').map(letter => 
     guessedLetters.value.includes(letter.toUpperCase()) ? letter : '_'
   );
 });
+
+function handleLivesChange(e) {
+  maxLives.value = parseInt(e.target.value);
+  startGame();
+}
 
 function startGame() {
   const filteredWords = vocabularyStore.filteredWords;
@@ -112,10 +222,11 @@ function startGame() {
   message.value = '';
   gameStarted.value = true;
   showRestart.value = false;
-  lives.value = maxLives;
+  lives.value = maxLives.value;
   gameOver.value = false;
   won.value = false;
   pointsEarned.value = 0;
+  score.value = 0;
 }
 
 async function makeGuess() {
@@ -140,12 +251,33 @@ async function makeGuess() {
     }
   } else {
     message.value = `Boa! A letra "${letter}" existe na palavra.`;
+    score.value += 2;
     
     // Verifica se a palavra está completa
     if (displayedWord.value.join('') === currentWord.value.word) {
       await handleGameOver(true);
     }
   }
+}
+
+function calculatePoints() {
+  // Pontos base por vencer
+  let points = POINTS_CONFIG.GAME_COMPLETION;
+  
+  // Pontos bônus com base nas vidas restantes (até 10 vidas agora)
+  points += lives.value * 2;
+  
+  // Bônus por jogo perfeito (sem erros)
+  if (lives.value === maxLives.value) {
+    points += POINTS_CONFIG.PERFECT_SCORE;
+  }
+  
+  // Bônus adicional por terminar com mais de 6 vidas
+  if (lives.value > 6) {
+    points += (lives.value - 6) * 3; // 3 pontos extras por cada vida extra acima de 6
+  }
+  
+  return points;
 }
 
 async function handleGameOver(hasWon) {
@@ -163,23 +295,7 @@ async function handleGameOver(hasWon) {
   }
 }
 
-function calculatePoints() {
-  // Pontos base por vencer
-  let points = POINTS_CONFIG.GAME_COMPLETION;
-  
-  // Pontos bônus com base nas vidas restantes
-  points += lives.value * 2;
-  
-  // Bônus por jogo perfeito (sem erros)
-  if (lives.value === maxLives) {
-    points += POINTS_CONFIG.PERFECT_SCORE;
-  }
-  
-  return points;
-}
-
 async function handlePerk(perkId) {
-  // Always deduct points before applying perk effect
   const success = await usePerk(perkId);
   if (!success) return;
   if (perkId === 'hint' && currentWord.value && !gameOver.value) {
@@ -208,27 +324,48 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.hangman-game {
+.game-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
-  height: 100%;
-  overflow: auto;
+  width: 100%;
 }
 
-.hangman-game h1 {
-  margin-bottom: 1rem;
+.game-settings {
+  min-width: 300px;
+  padding: var(--spacing-md);
 }
 
-.game-container {
+.game-settings h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-color);
+}
+
+.setting-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.setting-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.setting-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+/* .game-container {
   display: flex;
   align-items: center;
   gap: 1rem;
   width: 100%;
   justify-content: center;
   flex-direction: column;
-}
+} */
 
 .hangman-figure {
   margin-bottom: 2rem;
@@ -261,32 +398,36 @@ onMounted(() => {
   border-radius: 5px;
 }
 
-.info-container p {
-  font-size: 1rem;
-  margin: 0;
-  color: var(--secondary-color);
+.message-container {
+  text-align: center;
+  margin-bottom: 1rem;
+  min-height: 1.5rem;
+  color: var(--text-secondary);
 }
 
 .guess-container {
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  justify-content: center;
   align-items: center;
   padding: 20px;
+  margin-bottom: 1rem;
 }
 
 .guess-container input {
-  font-size: 1rem;
-  text-transform: uppercase;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.5rem;
   text-align: center;
-  padding: 0.5rem 1rem;
+  text-transform: uppercase;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
 }
 
 .guess-container button {
   padding: 0.5rem 1rem;
   background-color: var(--primary-color);
-  color: #fff;
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -294,31 +435,23 @@ onMounted(() => {
   transition: background-color 0.3s;
 }
 
-.guess-container button:hover {
-  background-color: #1f6391;
-}
-
-.message-container {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--accent-color);
-  margin-bottom: 1.5rem;
+.guess-container button:hover:not(:disabled) {
+  background-color: var(--secondary-color);
 }
 
 #restart-btn {
   padding: 0.5rem 1rem;
   background-color: var(--accent-color);
-  color: #fff;
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 1rem;
   transition: background-color 0.3s;
-  margin: auto;
 }
 
 #restart-btn:hover {
-  background-color: #c0392b;
+  background-color: var(--secondary-color);
 }
 
 .completion-message {
@@ -337,9 +470,9 @@ onMounted(() => {
 
 /* Responsivo */
 @media (max-width: 768px) {
-  .game-container {
+  /* .game-container {
     flex-direction: column;
-  }
+  } */
 
   .word-container .letter {
     width: 1.5rem;

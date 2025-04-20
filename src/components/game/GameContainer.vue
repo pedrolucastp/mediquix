@@ -2,11 +2,19 @@
   <div class="game-container" :class="{ dark: isDarkMode }">
     <h1>{{ title }}</h1>
     
-    <SelectorsComponent
-      v-if="showSelectorsContent"
+    <GameMenuBar
+      :gameInstructions="gameInstructions"
+      :availablePerks="availablePerks"
       @specialty-change="handleSpecialtyChange"
       @difficulty-change="handleDifficultyChange"
-    />
+    >
+      <template #settings>
+        <slot name="game-settings"></slot>
+      </template>
+      <template #info>
+        <slot name="game-info"></slot>
+      </template>
+    </GameMenuBar>
 
     <div v-if="error" class="error-message">
       {{ error }}
@@ -14,15 +22,15 @@
 
     <div v-else-if="loading" class="loading">
       <font-awesome-icon icon="circle-notch" spin size="2x" />
-      <p>Loading...</p>
+      <p>Carregando...</p>
     </div>
 
-    <div v-else-if="hasGameContent" class="game-content">
+    <div v-else class="game-content">
       <slot />
     </div>
 
     <div v-if="score !== undefined" class="score-container">
-      <p class="score">Score: {{ score }}</p>
+      <p class="score">Pontuação: {{ score }}</p>
     </div>
   </div>
 </template>
@@ -30,16 +38,16 @@
 <script setup>
 import { computed, shallowRef, watch } from 'vue';
 import { useUIStore } from '@/store/ui';
-import SelectorsComponent from '@/components/SelectorsComponent.vue';
+import GameMenuBar from './GameMenuBar.vue';
 
 const props = defineProps({
   title: {
     type: String,
     required: true
   },
-  showSelectors: {
-    type: Boolean,
-    default: true
+  gameInstructions: {
+    type: String,
+    required: true
   },
   error: {
     type: String,
@@ -52,26 +60,21 @@ const props = defineProps({
   score: {
     type: Number,
     default: undefined
+  },
+  availablePerks: {
+    type: Array,
+    default: () => []
   }
 });
 
 const emit = defineEmits(['specialty-change', 'difficulty-change']);
 
 const uiStore = useUIStore();
-// Cache dark mode state with shallowRef for better performance
 const isDarkMode = shallowRef(uiStore.isDarkMode);
 
-// Watch for dark mode changes efficiently
 watch(() => uiStore.isDarkMode, (newValue) => {
   isDarkMode.value = newValue;
 }, { flush: 'post' });
-
-// Renderless slot for game content for better performance
-const slots = defineSlots();
-const hasGameContent = computed(() => !!slots.default);
-
-// Cached selectors state
-const showSelectorsContent = computed(() => props.showSelectors && !props.error && !props.loading);
 
 function handleSpecialtyChange(value) {
   emit('specialty-change', value);
@@ -86,24 +89,24 @@ function handleDifficultyChange(value) {
 .game-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: var(--spacing-md);
   height: 100%;
+  padding: var(--spacing-md);
   overflow: auto;
 }
 
 h1 {
   margin-bottom: var(--spacing-md);
   color: var(--text-color);
+  text-align: center;
 }
 
 .game-content {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .error-message {
@@ -131,6 +134,7 @@ h1 {
 
 .score-container {
   margin-top: var(--spacing-md);
+  text-align: center;
 }
 
 .score {
@@ -161,6 +165,7 @@ h1 {
 @media (max-width: 768px) {
   .game-container {
     padding: var(--spacing-sm);
+    justify-content: flex-start;
   }
 }
 </style>

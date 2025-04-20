@@ -1,42 +1,69 @@
 <template>
-  <div class="memory-game">
-    <h1>Jogo de Memória</h1>
-    <SelectorsComponent
-      @specialty-change="createBoard"
-      @difficulty-change="createBoard"
-    />
-    <GamePerksMenu :availablePerks="['hint', 'open_third_card']" @perk-activated="handlePerk" />
-    <p id="definition">
-      {{
-        currentDefinition
-          ? currentDefinition.clue
-          : "Todas as palavras foram encontradas!"
-      }}
-    </p>
-    <div id="game-board">
-      <GameCardFlip
-        v-for="(card, index) in gameCards"
-        :key="index"
-        :flipped="card.flipped"
-        :matched="card.matched"
-        :disabled="count >= maxOpenCards"
-        @click="flipCard(index)"
-      >
-        <template #back>{{ card.word }}</template>
-      </GameCardFlip>
+  <GameContainer
+    title="Jogo da Memória"
+    :gameInstructions="gameInstructions"
+    :loading="loading"
+    :score="score"
+    :availablePerks="['hint', 'open_third_card']"
+    @specialty-change="createBoard"
+    @difficulty-change="createBoard"
+  >
+    <template #game-settings>
+      <div class="game-settings">
+        <h3>Configurações</h3>
+        <div class="setting-group">
+          <label>Número de pares</label>
+          <input type="range" :value="pairCount" min="8" max="40" step="4" @input="handlePairCountChange" />
+          <p class="setting-description">Quantidade de pares de palavras no jogo ({{ pairCount }} pares)</p>
+        </div>
+        <!-- <div class="setting-group">
+          <label>Tamanho das cartas</label>
+          <input type="range" :value="cardSize" min="100" max="200" step="20" @input="handleCardSizeChange" />
+          <p class="setting-description">Ajuste o tamanho das cartas</p>
+        </div> -->
+      </div>
+    </template>
+
+    <div class="game-content">
+      <p id="definition">
+        {{
+          currentDefinition
+            ? currentDefinition.clue
+            : "Todas as palavras foram encontradas!"
+        }}
+      </p>
+
+      <div id="game-board">
+        <GameCardFlip
+          v-for="(card, index) in gameCards"
+          :key="index"
+          :flipped="card.flipped"
+          :matched="card.matched"
+          :disabled="count >= maxOpenCards"
+          :cardSize="cardSize"
+          @click="flipCard(index)"
+        >
+          <template #back>{{ card.word }}</template>
+        </GameCardFlip>
+      </div>
     </div>
-    <p id="score">Pontuação: {{ score }}</p>
-  </div>
+  </GameContainer>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import SelectorsComponent from "@/components/SelectorsComponent.vue";
+import { ref, computed, onMounted } from "vue";
+import GameContainer from "@/components/game/GameContainer.vue";
 import GameCardFlip from "@/components/game/GameCardFlip.vue";
-import GamePerksMenu from '@/components/game/GamePerksMenu.vue';
 import { useGamePoints } from '@/composables/useGamePoints';
 import { useVocabularyStore } from "@/store/vocabulary";
 
+const gameInstructions = `Encontre os pares de palavras correspondentes!
+- Clique em uma carta para revelar a palavra
+- Combine a palavra com sua definição mostrada acima
+- Use o perk 'hint' para revelar um par de cartas
+- O perk 'open_third_card' permite abrir três cartas simultaneamente`;
+
+const loading = ref(false);
 const vocabularyStore = useVocabularyStore();
 const { usePerk } = useGamePoints();
 
@@ -50,7 +77,31 @@ const firstCardIndex = ref(null);
 const secondCardIndex = ref(null);
 const thirdCardIndex = ref(null);
 const matchedCards = ref([]);
-const maxOpenCards = ref(2); // Default is 2, can be set to 3 by perk
+const maxOpenCards = ref(2);
+const pairCount = ref(8);
+const cardSize = ref(140);
+
+// const boardStyle = computed(() => {
+//   // const totalCards = pairCount.value * 2;
+//   // let columns;
+//   // if (totalCards <= 16) columns = 4;
+//   // else if (totalCards <= 36) columns = 6;
+//   // else if (totalCards <= 64) columns = 8;
+//   // else columns = 10;
+  
+//   return {
+//     gridTemplateColumns: `repeat(4, 1fr)`,
+//   };
+// });
+
+function handlePairCountChange(e) {
+  pairCount.value = parseInt(e.target.value);
+  createBoard();
+}
+
+// function handleCardSizeChange(e) {
+//   cardSize.value = parseInt(e.target.value);
+// }
 
 function createBoard() {
   score.value = 0;
@@ -70,7 +121,7 @@ function createBoard() {
   }
 
   filteredWords.sort(() => Math.random() - 0.5);
-  gameWords.value = filteredWords.slice(0, 8);
+  gameWords.value = filteredWords.slice(0, pairCount.value);
 
   availableDefinitions.value = [...gameWords.value];
   selectNextDefinition();
@@ -119,7 +170,8 @@ function flipCard(index) {
 function checkMatch() {
   const firstCard = gameCards.value[firstCardIndex.value];
   const secondCard = gameCards.value[secondCardIndex.value];
-  if (maxOpenCards.value === 2 || thirdCardIndex.value === null) {
+  
+  if (maxOpenCards.value === 2) {
     if (
       firstCard.word === currentDefinition.value.word &&
       secondCard.word === currentDefinition.value.word
@@ -221,14 +273,38 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.memory-game {
-  text-align: center;
+.game-content {
   display: flex;
   flex-direction: column;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--spacing-md);
+  align-items: center;
   width: 100%;
+}
+
+.game-settings {
+  min-width: 300px;
+  padding: var(--spacing-md);
+}
+
+.game-settings h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-color);
+}
+
+.setting-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.setting-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.setting-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
 }
 
 #definition {
@@ -244,44 +320,26 @@ onMounted(() => {
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
+  text-align: center;
 }
 
 #game-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(8, 1fr);
+
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   margin: 0 auto;
   width: 100%;
-  max-width: 1000px;
+  max-width: 900px;
   perspective: 1000px;
+  justify-content: center;
 }
 
-#game-board :deep(.card) {
-  transform: rotate(-6deg);
-  transition: transform 0.3s ease;
-  aspect-ratio: 3/4;
-}
-
-#game-board :deep(.card:hover) {
-  transform: rotate(-6deg);
-}
-
-#game-board :deep(.card.flipped) {
-  transform: rotate(6deg);
-}
-
-#game-board :deep(.card-back) {
-  font-size: 1.1rem;
-  line-height: 1.4;
-  padding: var(--spacing-md);
-}
-
-#score {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-top: var(--spacing-lg);
-  color: var(--primary-color);
+@media (max-width: 768px) {
+  #game-board {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 :deep(.dark) #definition {
@@ -291,12 +349,11 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .memory-game {
+  .game-content {
     padding: var(--spacing-sm);
   }
 
   #game-board {
-    grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-sm);
     padding: var(--spacing-md);
     width: 100%;
@@ -306,14 +363,6 @@ onMounted(() => {
     font-size: 1.1rem;
     margin: var(--spacing-md) var(--spacing-sm);
     padding: var(--spacing-sm);
-  }
-
-  #game-board :deep(.card-back) {
-    font-size: 0.9rem;
-  }
-
-  #score {
-    font-size: 1.1rem;
   }
 }
 </style>

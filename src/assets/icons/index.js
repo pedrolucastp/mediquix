@@ -29,6 +29,7 @@ import {
   faLock,
   faKey,
   faChevronDown,
+  faChevronUp,
   faCircleNotch,
   faPenToSquare,
   faCheckCircle,
@@ -50,6 +51,12 @@ import {
   faLightbulb,
   faArrowUp,
   faPaperPlane,
+  faMagic,
+  faForward,
+  faLayerGroup,
+  faCircleInfo,
+  faBars,
+  faCircleCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -83,6 +90,7 @@ library.add(
   faLock,
   faKey,
   faChevronDown,
+  faChevronUp,
   faCircleNotch,
   faPenToSquare,
   faCheckCircle,
@@ -104,4 +112,10 @@ library.add(
   faLightbulb,
   faArrowUp,
   faPaperPlane,
+  faMagic,
+  faForward,
+  faLayerGroup,
+  faCircleInfo,
+  faBars,
+  faCircleCheck,
 )

@@ -4,10 +4,16 @@ import { ref } from 'vue';
 export const useUIStore = defineStore('ui', () => {
   // Dark mode state
   const isDarkMode = ref(localStorage.getItem('darkMode') === 'true');
+  // Drawer state
+  const isDrawerOpen = ref(false);
 
   function toggleDarkMode() {
     isDarkMode.value = !isDarkMode.value;
     localStorage.setItem('darkMode', isDarkMode.value);
+  }
+
+  function toggleDrawer() {
+    isDrawerOpen.value = !isDrawerOpen.value;
   }
 
   // Modal states
@@ -72,6 +78,10 @@ export const useUIStore = defineStore('ui', () => {
     // Dark mode
     isDarkMode,
     toggleDarkMode,
+
+    // Drawer
+    isDrawerOpen,
+    toggleDrawer,
 
     // Modals
     openModal,
