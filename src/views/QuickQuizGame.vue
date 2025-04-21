@@ -65,10 +65,13 @@ import { useGamePoints } from '@/composables/useGamePoints';
 import { useGameTimer } from '@/composables/useGameTimer';
 import { useVocabularyStore } from "@/store/vocabulary";
 
-const gameInstructions = `Teste seus conhecimentos médicos neste quiz rápido! 
-Você terá um tempo limitado para responder cada questão. 
-Escolha a palavra correta que corresponde à definição mostrada.
-Use perks para pular questões difíceis ou ganhar tempo extra.`;
+const gameInstructions = `Responda as questões em tempo limitado!
+- Leia a pergunta e digite a resposta
+- Ganhe 2 pontos por resposta correta
+- Ganhe 10 pontos por completar o quiz
+- Ganhe 15 pontos de bônus por acertar todas
+- Use 'skip' (8 pts) para pular uma questão
+- Use 'extra_time' (3 pts) para +30 segundos`;
 
 const loading = ref(false);
 const currentQuestionIndex = ref(0);
@@ -229,11 +232,9 @@ async function handlePerk(perkId) {
 }
 
 function calculateGamePoints(correctAnswers, isPerfect) {
-  let points = correctAnswers * POINTS_CONFIG.correctAnswer;
-  if (isPerfect) {
-    points += POINTS_CONFIG.perfectGameBonus;
-  }
-  return points;
+  let points = correctAnswers * POINTS_CONFIG.WORD_FOUND;
+  if (isPerfect) points += POINTS_CONFIG.PERFECT_SCORE;
+  return points + POINTS_CONFIG.GAME_COMPLETION;
 }
 
 // Watch for time changes and update the progress bar

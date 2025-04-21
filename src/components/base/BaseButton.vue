@@ -64,6 +64,7 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .base-button:hover:not(:disabled) {

@@ -60,14 +60,19 @@ import { useVocabularyStore } from "@/store/vocabulary";
 const gameInstructions = `Encontre os pares de palavras correspondentes!
 - Clique em uma carta para revelar a palavra
 - Combine a palavra com sua definição mostrada acima
-- Use o perk 'hint' para revelar um par de cartas
-- O perk 'open_third_card' permite abrir três cartas simultaneamente`;
+- Ganhe 2 pontos por cada par encontrado
+- Ganhe 10 pontos por completar o jogo
+- Ganhe 15 pontos de bônus por terminar sem erros
+- Use o perk 'hint' (5 pts) para revelar um par de cartas
+- O perk 'open_third_card' (6 pts) permite abrir três cartas simultaneamente`;
 
 const loading = ref(false);
 const vocabularyStore = useVocabularyStore();
-const { usePerk } = useGamePoints();
+const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
 
 const score = ref(0);
+const attempts = ref(0);
+const pointsEarned = ref(0);
 const gameCards = ref([]);
 const currentDefinition = ref(null);
 const gameWords = ref([]);
@@ -81,30 +86,15 @@ const maxOpenCards = ref(2);
 const pairCount = ref(8);
 const cardSize = ref(140);
 
-// const boardStyle = computed(() => {
-//   // const totalCards = pairCount.value * 2;
-//   // let columns;
-//   // if (totalCards <= 16) columns = 4;
-//   // else if (totalCards <= 36) columns = 6;
-//   // else if (totalCards <= 64) columns = 8;
-//   // else columns = 10;
-  
-//   return {
-//     gridTemplateColumns: `repeat(4, 1fr)`,
-//   };
-// });
-
 function handlePairCountChange(e) {
   pairCount.value = parseInt(e.target.value);
   createBoard();
 }
 
-// function handleCardSizeChange(e) {
-//   cardSize.value = parseInt(e.target.value);
-// }
-
 function createBoard() {
   score.value = 0;
+  attempts.value = 0;
+  pointsEarned.value = 0;
   count.value = 0;
   matchedCards.value = [];
   maxOpenCards.value = 2;
@@ -149,7 +139,7 @@ function flipCard(index) {
   if (card.flipped || card.matched) return;
 
   card.flipped = true;
-  score.value++;
+  attempts.value++;
 
   if (count.value === 0) {
     firstCardIndex.value = index;
@@ -181,12 +171,7 @@ function checkMatch() {
       matchedCards.value.push(firstCard, secondCard);
       resetGuesses();
       if (matchedCards.value.length === gameCards.value.length) {
-        setTimeout(() => {
-          alert(
-            `Parabéns! Você encontrou todos os pares com ${score.value} cliques.`
-          );
-          createBoard();
-        }, 500);
+        handleGameCompletion();
       } else {
         setTimeout(() => {
           selectNextDefinition();
@@ -212,12 +197,7 @@ function checkMatch() {
       resetGuesses();
       maxOpenCards.value = 2;
       if (matchedCards.value.length === gameCards.value.length) {
-        setTimeout(() => {
-          alert(
-            `Parabéns! Você encontrou todos os pares com ${score.value} cliques.`
-          );
-          createBoard();
-        }, 500);
+        handleGameCompletion();
       } else {
         setTimeout(() => {
           selectNextDefinition();
@@ -265,6 +245,24 @@ async function handlePerk(perkId) {
   } else if (perkId === 'open_third_card') {
     maxOpenCards.value = 3;
   }
+}
+
+function calculateGamePoints() {
+  const basePoints = (matchedCards.value.length / 2) * POINTS_CONFIG.WORD_FOUND;
+  const isPerfect = attempts.value === matchedCards.value.length;
+  return basePoints + POINTS_CONFIG.GAME_COMPLETION + (isPerfect ? POINTS_CONFIG.PERFECT_SCORE : 0);
+}
+
+async function handleGameCompletion() {
+  const points = calculateGamePoints();
+  await awardPoints(points);
+  pointsEarned.value = points;
+  setTimeout(() => {
+    alert(
+      `Parabéns! Você encontrou todos os pares em ${attempts.value} tentativas.\nPontos ganhos: ${points}`
+    );
+    createBoard();
+  }, 500);
 }
 
 onMounted(() => {

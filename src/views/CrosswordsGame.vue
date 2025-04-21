@@ -65,11 +65,13 @@ import { useGamePoints } from '@/composables/useGamePoints'
 const gameInstructions = `Complete as palavras cruzadas usando as dicas fornecidas.
 - Clique em uma célula para selecionar uma palavra
 - Use as dicas para descobrir as palavras
-- Clique em uma dica para destacar a palavra correspondente
-- Use a dica (perk) para revelar uma letra aleatória
+- Ganhe 2 pontos por cada palavra completada
+- Ganhe 10 pontos por completar o jogo
+- Ganhe 15 pontos de bônus por terminar sem erros
+- Use a dica (5 pts) para revelar uma letra aleatória
 - Todas as palavras estão relacionadas à especialidade médica selecionada`
 
-const { usePerk, calculateGameScore } = useGamePoints();
+const { usePerk, POINTS_CONFIG, awardPoints } = useGamePoints();
 
 // Constants
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
@@ -105,6 +107,8 @@ const isLoading = ref(false)
 const currentAttempt = ref(1)
 const loading = ref(false)
 const score = ref(0)
+const gameStarted = ref(false)
+const pointsEarned = ref(0)
 
 // Stores
 const vocabularyStore = useVocabularyStore()
@@ -370,42 +374,19 @@ function isInputPartOfCurrentWord(input) {
   }
 }
 
-// async function checkAnswers() {
-//   let allCorrect = true
-//   let correctAnswers = 0
-//   const totalAnswers = placedWords.value.length
+function calculateGamePoints(mistakes) {
+  const basePoints = WORD_COUNT * POINTS_CONFIG.WORD_FOUND;
+  const isPerfect = mistakes === 0;
+  return basePoints + POINTS_CONFIG.GAME_COMPLETION + (isPerfect ? POINTS_CONFIG.PERFECT_SCORE : 0);
+}
 
-//   for (const key in cellRefs) {
-//     const input = cellRefs[key]
-//     const userInput = normalizeString(input.value || '')
-//     const correctInput = normalizeString(input.dataset.correct)
-//     if (userInput === correctInput) {
-//       input.style.backgroundColor = '#b2ffb2'
-//       correctAnswers++
-//     } else {
-//       input.style.backgroundColor = '#ffb2b2'
-//       input.value = input.dataset.correct // Show correct letter
-//       input.style.color = '#FF0000' // Make incorrect answers red
-//       allCorrect = false
-//     }
-//   }
-
-//   // Calculate score based on correct answers
-//   const newScore = calculateGameScore({
-//     correctAnswers,
-//     totalAnswers,
-//     isPerfect: allCorrect,
-//     timeBonus: 0 // Add time bonus logic if needed
-//   })
-//   score.value = newScore
-
-//   if (allCorrect) {
-//     alert('Parabéns! Você completou corretamente!')
-//     startGame() // Start new game without level increment
-//   } else {
-//     console.log('Existem erros em suas respostas. As respostas corretas estão em vermelho.')
-//   }
-// }
+async function handleGameCompletion(mistakes = 0) {
+  gameStarted.value = false;
+  const points = calculateGamePoints(mistakes);
+  await awardPoints(points);
+  pointsEarned.value = points;
+  alert(`Parabéns! Você completou o jogo${mistakes === 0 ? ' sem erros' : ''}!\nPontos ganhos: ${points}`);
+}
 
 function initializeGrid() {
   // Clear the grid array

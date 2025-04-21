@@ -108,11 +108,14 @@ import GameMenuBar from '@/components/game/GameMenuBar.vue';
 import { useVocabularyStore } from '@/store/vocabulary';
 import { useGamePoints } from '@/composables/useGamePoints';
 
-const gameInstructions = `Adivinhe a palavra secreta antes que o boneco seja completado!
-- Digite uma letra e pressione Enter ou clique em "Tentar"
-- Você tem um número limitado de tentativas antes de perder
-- Use a dica para revelar uma letra da palavra
-- Preste atenção na dica fornecida abaixo da palavra`;
+const gameInstructions = `Adivinhe a palavra antes de completar o boneco!
+- Digite uma letra para tentar adivinhar a palavra
+- Ganhe 2 pontos por cada letra correta
+- Ganhe 10 pontos por completar o jogo
+- Ganhe 15 pontos de bônus por não errar nenhuma letra
+- Ganhe 2 pontos extras por cada vida restante
+- Use 'hint' (5 pts) para revelar uma letra
+- Use 'skip' (8 pts) para pular a palavra atual`;
 
 const loading = ref(false);
 const score = ref(0);
@@ -261,23 +264,16 @@ async function makeGuess() {
 }
 
 function calculatePoints() {
-  // Pontos base por vencer
+  // Points for winning
   let points = POINTS_CONFIG.GAME_COMPLETION;
   
-  // Pontos bônus com base nas vidas restantes (até 10 vidas agora)
+  // Points for remaining lives (2 points per life)
   points += lives.value * 2;
   
-  // Bônus por jogo perfeito (sem erros)
+  // Perfect score bonus (no mistakes)
   if (lives.value === maxLives.value) {
     points += POINTS_CONFIG.PERFECT_SCORE;
   }
-  
-  // Bônus adicional por terminar com mais de 6 vidas
-  if (lives.value > 6) {
-    points += (lives.value - 6) * 3; // 3 pontos extras por cada vida extra acima de 6
-  }
-  
-  return points;
 }
 
 async function handleGameOver(hasWon) {

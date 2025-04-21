@@ -1,14 +1,6 @@
 <template>
   <div class="points-display">
     <div class="points-info">
-      <div class="points-balance">
-        <font-awesome-icon icon="coins" class="points-icon" />
-        <span class="total-points">{{ pointsStore.totalPoints }}</span>
-        <span class="points-breakdown" v-if="pointsStore.freePoints > 0">
-          ({{ pointsStore.freePoints }} grátis)
-        </span>
-      </div>
-      
       <BaseButton 
         variant="accent"
         icon="gift"
@@ -19,6 +11,14 @@
       >
         Pontos Diários
       </BaseButton>
+      <div class="points-balance">
+        <font-awesome-icon icon="coins" class="points-icon" />
+        <span class="total-points">{{ pointsStore.totalPoints }}</span>
+        <!-- <span class="points-breakdown" v-if="pointsStore.freePoints > 0">
+          ({{ pointsStore.freePoints }} grátis)
+        </span> -->
+      </div>
+      
     </div>
 
     <BaseModal v-model="showPurchaseModal" title="Comprar Pontos">

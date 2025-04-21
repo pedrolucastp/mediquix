@@ -6,8 +6,8 @@
     </router-link>
     
     <!-- Add PointsDisplay here -->
+    <PointsDisplay />
     <div class="header-controls">
-      <PointsDisplay />
       <button class="menu-toggle" @click="uiStore.toggleDrawer" aria-label="Toggle menu">
         <font-awesome-icon icon="bars" />
       </button>
@@ -162,7 +162,7 @@ header {
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   transition: all 0.3s ease;
-  width: 100%;
+  /* width: 100%; */
   /* justify-content: space-between; */
 }
 

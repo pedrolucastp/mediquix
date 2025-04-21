@@ -74,10 +74,13 @@ import { useSettingsStore } from "@/store/settings";
 import BaseButton from '@/components/base/BaseButton.vue';
 import { useGamePoints } from '@/composables/useGamePoints';
 
-const gameInstructions = `Encontre todas as palavras escondidas na grade! 
-As palavras podem estar na horizontal, vertical ou diagonal, em qualquer direção.
-Clique e arraste para selecionar uma palavra. Use a dica para revelar a localização de uma palavra.
-A lista de palavras mostra as definições que você precisa encontrar.`;
+const gameInstructions = `Encontre todas as palavras escondidas na grade!
+- Clique e arraste para selecionar as palavras
+- Ganhe 2 pontos por cada palavra encontrada
+- Ganhe 10 pontos por completar o jogo
+- Ganhe 15 pontos de bônus se não errar nenhuma vez
+- Use 'hint' (5 pts) para revelar uma palavra aleatória
+- Use 'extra_time' (3 pts) para +30 segundos`;
 
 const loading = ref(false);
 const settingsStore = useSettingsStore();
@@ -455,7 +458,7 @@ function checkSelectedWord() {
 
 function calculateGamePoints() {
   const basePoints = gameWords.value.length * POINTS_CONFIG.WORD_FOUND;
-  const isPerfect = true;
+  const isPerfect = score.value >= 0; // Score is only negative if there were mistakes
   return basePoints + POINTS_CONFIG.GAME_COMPLETION + (isPerfect ? POINTS_CONFIG.PERFECT_SCORE : 0);
 }
 
