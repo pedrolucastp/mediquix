@@ -1,5 +1,9 @@
 <template>
   <header :class="{ dark: isDarkMode }">
+    <router-link to="/" class="logo">
+      <img src="@/assets/logo.svg" alt="Logo" width="30" height="30" />
+      <!-- <h2>MediQuix</h2> -->
+    </router-link>
     <button class="menu-toggle" @click="uiStore.toggleDrawer" aria-label="Toggle menu">
       <font-awesome-icon icon="bars" />
     </button>
@@ -18,10 +22,11 @@
       </div>
 
       <div class="drawer-content">
-        
+
         <AuthControls />
         <DarkModeToggle />
       </div>
+      <FooterComponent />
     </nav>
   </header>
 </template>
@@ -31,6 +36,7 @@ import { computed } from 'vue';
 import { useUIStore } from '@/store/ui';
 import DarkModeToggle from './DarkModeToggle.vue';
 import AuthControls from './auth/AuthControls.vue';
+import FooterComponent from './FooterComponent.vue';
 
 const uiStore = useUIStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
@@ -48,6 +54,7 @@ header {
   top: 0;
   z-index: 100;
   transition: all 0.3s ease;
+  justify-content: flex-end;
 }
 
 .menu-toggle {
@@ -90,7 +97,7 @@ header {
   top: 0;
   left: 0;
   height: 100%;
-  width: 280px;
+  width: 100%;
   background-color: var(--surface-color);
   z-index: 99;
   transform: translateX(-100%);
@@ -110,6 +117,7 @@ header {
   justify-content: space-between;
   padding: var(--spacing-md);
   border-bottom: 1px solid var(--border-color);
+  height: 60px;
 }
 
 .drawer-content {
@@ -135,7 +143,7 @@ header {
   transition: transform 0.2s ease;
 }
 
-close-drawer:hover {
+.close-drawer:hover {
   transform: scale(1.1);
 }
 
@@ -148,6 +156,8 @@ close-drawer:hover {
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   transition: all 0.3s ease;
+  width: 100%;
+  /* justify-content: space-between; */
 }
 
 .logo:hover {

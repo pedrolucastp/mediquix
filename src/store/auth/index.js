@@ -158,12 +158,12 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('User must be authenticated to fetch settings');
       }
 
-      // Get user ID as string
       const userId = String(user.value.uid);
-      
-      // We don't need to get db instance explicitly since our doc wrapper handles it
-      const userDocRef = doc('users', userId);
-      const docSnap = await getDoc(userDocRef);
+      const db = getOrInitFirestore();
+      if (!db) return;
+
+      const userRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(userRef);
 
       if (docSnap.exists()) {
         const settingsData = docSnap.data();
@@ -174,23 +174,32 @@ export const useAuthStore = defineStore('auth', () => {
           default_speciality: Number(settingsStore.settings.defaultSpecialty),
           custom_vocabulary: [],
           isPremium: false,
-          premiumActivatedAt: null,
-          emailVerified: user.value.emailVerified || false
+          points: 0,
+          freePoints: 100,
+          lastFreePointsUpdate: new Date(),
         };
 
+        // Merge existing settings with defaults, ensuring points fields exist
         const mergedSettings = {
           ...defaultSettings,
           ...settingsData,
+          // Ensure points fields are initialized if missing
+          points: settingsData.points ?? defaultSettings.points,
+          freePoints: settingsData.freePoints ?? defaultSettings.freePoints,
+          lastFreePointsUpdate: settingsData.lastFreePointsUpdate ?? defaultSettings.lastFreePointsUpdate,
+          // Convert number fields properly
           default_difficulty: Number(settingsData.default_difficulty ?? defaultSettings.default_difficulty),
           default_speciality: Number(settingsData.default_speciality ?? defaultSettings.default_speciality),
+          // Ensure arrays and booleans are proper
           custom_vocabulary: Array.isArray(settingsData.custom_vocabulary) ? settingsData.custom_vocabulary : [],
           isPremium: Boolean(settingsData.isPremium),
           premiumActivatedAt: settingsData.premiumActivatedAt || null,
           emailVerified: user.value.emailVerified || false
         };
 
+        // Update document if any new fields were added
         if (JSON.stringify(mergedSettings) !== JSON.stringify(settingsData)) {
-          await updateDoc(userDocRef, mergedSettings);
+          await updateDoc(userRef, mergedSettings);
         }
 
         user.value.settings = mergedSettings;

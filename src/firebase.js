@@ -166,5 +166,6 @@ export {
   sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
+  onAuthStateChanged,
   actionCodeSettings
 };

@@ -2,14 +2,12 @@
   <SplashScreen />
   <HeaderComponent />
   <MainComponent />
-  <FooterComponent />
 </template>
 
 <script setup>
 import SplashScreen from "./components/SplashScreen.vue";
 import HeaderComponent from "./components/HeaderComponent.vue";
 import MainComponent from "./components/MainComponent.vue";
-import FooterComponent from "./components/FooterComponent.vue";
 </script>
 
 <style>

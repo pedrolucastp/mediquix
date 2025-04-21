@@ -389,6 +389,8 @@ async function handleLogin() {
     showResendVerification.value = false;
     await authStore.login(loginEmail.value, loginPassword.value);
     showAuthModal.value = false;
+    // Close the drawer after successful login
+    uiStore.toggleDrawer();
   } catch (error) {
     if (error.message.includes('email') && error.message.includes('verify')) {
       showResendVerification.value = true;
