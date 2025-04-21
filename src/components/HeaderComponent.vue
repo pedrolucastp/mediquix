@@ -4,9 +4,14 @@
       <img src="@/assets/logo.svg" alt="Logo" width="30" height="30" />
       <!-- <h2>MediQuix</h2> -->
     </router-link>
-    <button class="menu-toggle" @click="uiStore.toggleDrawer" aria-label="Toggle menu">
-      <font-awesome-icon icon="bars" />
-    </button>
+    
+    <!-- Add PointsDisplay here -->
+    <div class="header-controls">
+      <PointsDisplay />
+      <button class="menu-toggle" @click="uiStore.toggleDrawer" aria-label="Toggle menu">
+        <font-awesome-icon icon="bars" />
+      </button>
+    </div>
 
     <!-- Drawer Menu -->
     <div class="drawer-overlay" :class="{ open: uiStore.isDrawerOpen }" @click="uiStore.toggleDrawer"></div>
@@ -37,6 +42,7 @@ import { useUIStore } from '@/store/ui';
 import DarkModeToggle from './DarkModeToggle.vue';
 import AuthControls from './auth/AuthControls.vue';
 import FooterComponent from './FooterComponent.vue';
+import PointsDisplay from './PointsDisplay.vue';
 
 const uiStore = useUIStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
@@ -46,6 +52,7 @@ const isDarkMode = computed(() => uiStore.isDarkMode);
 header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: var(--spacing-md);
   background-color: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
@@ -54,7 +61,6 @@ header {
   top: 0;
   z-index: 100;
   transition: all 0.3s ease;
-  justify-content: flex-end;
 }
 
 .menu-toggle {
@@ -169,6 +175,12 @@ header {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
 }
 
 /* Dark mode styles */

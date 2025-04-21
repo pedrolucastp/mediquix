@@ -57,6 +57,8 @@ import {
   faCircleInfo,
   faBars,
   faCircleCheck,
+  faCoins,
+  faGift,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -118,4 +120,6 @@ library.add(
   faCircleInfo,
   faBars,
   faCircleCheck,
+  faCoins,
+  faGift,
 )

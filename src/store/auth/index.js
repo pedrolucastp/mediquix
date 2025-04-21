@@ -19,11 +19,13 @@ import {
 } from '@/firebase';
 import { useSettingsStore } from '../settings';
 import { useUIStore } from '../ui/index';
+import { usePointsStore } from '../points';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
   const settingsStore = useSettingsStore();
   const uiStore = useUIStore();
+  const pointsStore = usePointsStore();
 
   // Getters
   const isAuthenticated = computed(() => !!user.value);
@@ -206,6 +208,13 @@ export const useAuthStore = defineStore('auth', () => {
         settingsStore.setDefaultPreferences({
           defaultSpecialty: mergedSettings.default_speciality,
           defaultDifficulty: mergedSettings.default_difficulty
+        });
+
+        // Initialize points store with the user's points
+        pointsStore.$patch({
+          points: mergedSettings.points,
+          freePoints: mergedSettings.freePoints,
+          lastFreePointsUpdate: mergedSettings.lastFreePointsUpdate
         });
       } else {
         throw new Error('User settings document not found');

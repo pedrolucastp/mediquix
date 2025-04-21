@@ -10,11 +10,12 @@
       </div>
       
       <BaseButton 
-        v-if="canClaimDaily"
         variant="accent"
         icon="gift"
         @click="claimDailyPoints"
         :loading="loading"
+        :disabled="!canClaimDailyPoints"
+        :title="buttonTitle"
       >
         Pontos Diários
       </BaseButton>
@@ -76,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { usePointsStore } from '@/store/points';
 import { usePaymentsStore } from '@/store/payments';
 import BaseButton from './base/BaseButton.vue';
@@ -91,17 +92,19 @@ const showPixModal = ref(false);
 const pointsAmount = ref(50);
 const pixData = ref(null);
 
-const canClaimDaily = ref(false);
+// Use computed instead of ref for daily points availability
+const canClaimDailyPoints = computed(() => pointsStore.canClaimFreePoints);
+const buttonTitle = computed(() => canClaimDailyPoints.value ? 'Clique para reivindicar seus pontos diários' : 'Pontos diários não disponíveis');
 
-onMounted(async () => {
-  canClaimDaily.value = await pointsStore.checkDailyPoints();
+onMounted(() => {
+  // Initialize points data
+  pointsStore.initializePoints();
 });
 
 async function claimDailyPoints() {
   loading.value = true;
   try {
     await pointsStore.claimDailyPoints();
-    canClaimDaily.value = false;
   } finally {
     loading.value = false;
   }

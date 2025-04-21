@@ -17,7 +17,7 @@ export const POINTS_CONFIG = {
 
 export function useGamePoints() {
   const pointsStore = usePointsStore();
-  const points = computed(() => pointsStore.points);
+  const totalPoints = computed(() => pointsStore.totalPoints);
 
   async function awardPoints(amount) {
     await pointsStore.addPoints(amount);
@@ -25,15 +25,15 @@ export function useGamePoints() {
 
   async function usePerk(perkId) {
     const cost = POINTS_CONFIG.PERK_COSTS[perkId];
-    if (!cost || points.value < cost) {
+    if (!cost || totalPoints.value < cost) {
       return false;
     }
-    await pointsStore.deductPoints(cost);
+    await pointsStore.usePoints(cost);
     return true;
   }
 
   return {
-    points,
+    points: totalPoints,
     POINTS_CONFIG,
     awardPoints,
     usePerk

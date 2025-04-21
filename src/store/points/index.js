@@ -24,9 +24,14 @@ export const usePointsStore = defineStore('points', () => {
   const totalPoints = computed(() => points.value + freePoints.value);
   const canClaimFreePoints = computed(() => {
     if (!lastFreePointsUpdate.value || !authStore.isAuthenticated) return false;
-    const now = new Date();
-    const last = lastFreePointsUpdate.value.toDate();
-    return now - last >= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    
+    // Get current timestamp in seconds
+    const now = Math.floor(Date.now() / 1000);
+    const last = lastFreePointsUpdate.value.seconds;
+    
+    // Check if 24 hours (86400 seconds) have passed
+    // Check if 60 seconds have passed on development
+    return (now - last) >= 60;
   });
 
   /**
@@ -169,6 +174,27 @@ export const usePointsStore = defineStore('points', () => {
     }
   }
 
+  /**
+   * @action checkDailyPoints
+   * @description Checks if daily points can be claimed
+   * @returns {boolean} True if daily points can be claimed, false otherwise
+   */
+  async function checkDailyPoints() {
+    if (!authStore.isAuthenticated) return false;
+    const db = getOrInitFirestore();
+    if (!db) return false;
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', authStore.user.uid));
+      const userData = userDoc.data();
+      lastFreePointsUpdate.value = userData.lastFreePointsUpdate;
+      return canClaimFreePoints.value;
+    } catch (error) {
+      console.error('Error checking daily points:', error);
+      return false;
+    }
+  }
+
   // Only initialize points if user is already authenticated
   if (authStore.isAuthenticated) {
     initializePoints();
@@ -183,6 +209,7 @@ export const usePointsStore = defineStore('points', () => {
     addPoints,
     usePoints,
     claimDailyPoints,
-    initializePoints
+    initializePoints,
+    checkDailyPoints
   };
 });
