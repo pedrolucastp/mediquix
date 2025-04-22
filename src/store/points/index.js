@@ -174,11 +174,6 @@ export const usePointsStore = defineStore('points', () => {
       uiStore.setError('points', 'Você precisa estar logado para resgatar pontos diários');
       throw new Error('Authentication required');
     }
-    
-    if (!canClaimFreePoints.value) {
-      uiStore.setError('points', 'Pontos diários não disponíveis ainda');
-      throw new Error('Daily points not available yet');
-    }
 
     const db = getOrInitFirestore();
     if (!db) {
@@ -191,31 +186,22 @@ export const usePointsStore = defineStore('points', () => {
     try {
       uiStore.setLoading('points', true);
       
-      // First, validate the current state again
-      const docSnap = await getDoc(userRef);
-      if (!docSnap.exists()) {
-        throw new Error('User document not found');
-      }
-
-      const userData = docSnap.data();
-      const lastUpdate = userData.lastFreePointsUpdate;
-      const now = Math.floor(Date.now() / 1000);
-      const last = lastUpdate?.seconds || Math.floor(lastUpdate?.getTime() / 1000) || 0;
-      
-      if ((now - last) < 60) { // 60 seconds for development
+      // Do one final verification
+      const isAvailable = await checkDailyPoints();
+      if (!isAvailable) {
         uiStore.setError('points', 'Pontos diários não disponíveis ainda');
         throw new Error('Daily points not available yet');
       }
 
-      // Atomic update with the server timestamp
+      // Perform atomic update
       await updateDoc(userRef, {
         freePoints: increment(10),
         lastFreePointsUpdate: serverTimestamp()
       });
 
-      // Update local state after successful server update
+      // Update local state
       freePoints.value += 10;
-      lastFreePointsUpdate.value = new Date(); // Use current time as an approximation
+      lastFreePointsUpdate.value = new Date();
       uiStore.setSuccess('points', 'Pontos diários resgatados!');
     } catch (error) {
       uiStore.setError('points', error.message);
@@ -228,7 +214,7 @@ export const usePointsStore = defineStore('points', () => {
   /**
    * @action checkDailyPoints
    * @description Checks if daily points can be claimed
-   * @returns {boolean} True if daily points can be claimed, false otherwise
+   * @returns {Promise<boolean>} True if daily points can be claimed
    */
   async function checkDailyPoints() {
     if (!authStore.isAuthenticated) return false;
@@ -237,9 +223,15 @@ export const usePointsStore = defineStore('points', () => {
 
     try {
       const userDoc = await getDoc(doc(db, 'users', authStore.user.uid));
+      if (!userDoc.exists()) return false;
+
       const userData = userDoc.data();
-      lastFreePointsUpdate.value = userData.lastFreePointsUpdate;
-      return canClaimFreePoints.value;
+      const last = userData.lastFreePointsUpdate?.seconds || 0;
+      const now = Math.floor(Date.now() / 1000);
+      
+      // Development: 60 seconds
+      // Production: Should be 86400 (24 hours)
+      return (now - last) >= 60;
     } catch (error) {
       console.error('Error checking daily points:', error);
       return false;

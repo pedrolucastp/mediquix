@@ -102,8 +102,16 @@ onMounted(() => {
 });
 
 async function claimDailyPoints() {
+  if (!pointsStore.canClaimFreePoints) {
+    return;
+  }
+
   loading.value = true;
   try {
+    const isAvailable = await pointsStore.checkDailyPoints();
+    if (!isAvailable) {
+      throw new Error('Daily points not available yet');
+    }
     await pointsStore.claimDailyPoints();
   } catch (error) {
     console.error('Error claiming daily points:', error);

@@ -57,13 +57,13 @@ service cloud.firestore {
      * @function validatePointsMutation
      * @param {map} request - The request.resource.data
      * @param {map} resource - The resource.data
-     * @returns {bool} True if points/freePoints mutation is valid (atomic, small delta)
+     * @returns {bool} True if points/freePoints mutation is valid (non-negative values)
      */
     function validatePointsMutation(request, resource) {
       return (!('points' in request && 'points' in resource) || 
-              (request.points == resource.points || abs(request.points - resource.points) <= 100))
+              (request.points >= 0))
         && (!('freePoints' in request && 'freePoints' in resource) || 
-            (request.freePoints == resource.freePoints || abs(request.freePoints - resource.freePoints) <= 100));
+            (request.freePoints >= 0));
     }
 
     // Allow users to read and write only their own data
