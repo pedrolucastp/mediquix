@@ -18,6 +18,8 @@ import {
   getDoc,
   updateDoc,
   setDoc,
+  serverTimestamp,
+  increment,
 } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -167,5 +169,7 @@ export {
   verifyPasswordResetCode,
   confirmPasswordReset,
   onAuthStateChanged,
-  actionCodeSettings
+  actionCodeSettings,
+  serverTimestamp,
+  increment
 };

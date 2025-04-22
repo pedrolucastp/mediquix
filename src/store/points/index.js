@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useAuthStore } from '../auth';
-import { doc, updateDoc, getDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { getOrInitFirestore } from '@/firebase';
 import { useUIStore } from '../ui';
 
@@ -27,7 +27,9 @@ export const usePointsStore = defineStore('points', () => {
     
     // Get current timestamp in seconds
     const now = Math.floor(Date.now() / 1000);
-    const last = lastFreePointsUpdate.value.seconds;
+    
+    // Handle both Firestore Timestamp and JavaScript Date objects
+    const last = lastFreePointsUpdate.value.seconds || Math.floor(lastFreePointsUpdate.value.getTime() / 1000);
     
     // Check if 24 hours (86400 seconds) have passed
     // Check if 60 seconds have passed on development
@@ -39,18 +41,35 @@ export const usePointsStore = defineStore('points', () => {
    * @description Loads user points from Firestore
    */
   async function initializePoints() {
-    if (!authStore.isAuthenticated) return;
+    if (!authStore.isAuthenticated) {
+      return;
+    }
 
     try {
       uiStore.setLoading('points', true);
       const db = getOrInitFirestore();
-      if (!db) return;
+      if (!db) {
+        throw new Error('Database connection failed');
+      }
 
       const userDoc = await getDoc(doc(db, 'users', authStore.user.uid));
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+
       const userData = userDoc.data();
-      points.value = userData.points || 0;
-      freePoints.value = userData.freePoints || 0;
+      points.value = userData.points ?? 0;
+      freePoints.value = userData.freePoints ?? 0;
       lastFreePointsUpdate.value = userData.lastFreePointsUpdate;
+
+      // If lastFreePointsUpdate is missing, set it now
+      if (!lastFreePointsUpdate.value) {
+        await updateDoc(doc(db, 'users', authStore.user.uid), {
+          lastFreePointsUpdate: serverTimestamp()
+        });
+        lastFreePointsUpdate.value = new Date();
+      }
+
       uiStore.setSuccess('points', 'Pontos carregados');
     } catch (error) {
       uiStore.setError('points', error.message);
@@ -67,10 +86,16 @@ export const usePointsStore = defineStore('points', () => {
    * @throws {Error} On failure
    */
   async function addPoints(amount, isFree = false) {
-    if (!authStore.isAuthenticated) return;
+    if (!authStore.isAuthenticated) {
+      uiStore.setError('points', 'Você precisa estar logado para ganhar pontos');
+      throw new Error('Authentication required');
+    }
     
     const db = getOrInitFirestore();
-    if (!db) return;
+    if (!db) {
+      uiStore.setError('points', 'Erro ao conectar com o banco de dados');
+      throw new Error('Database connection failed');
+    }
 
     const userRef = doc(db, 'users', authStore.user.uid);
     const field = isFree ? 'freePoints' : 'points';
@@ -145,7 +170,10 @@ export const usePointsStore = defineStore('points', () => {
    * @throws {Error} If not available or on failure
    */
   async function claimDailyPoints() {
-    if (!authStore.isAuthenticated) return;
+    if (!authStore.isAuthenticated) {
+      uiStore.setError('points', 'Você precisa estar logado para resgatar pontos diários');
+      throw new Error('Authentication required');
+    }
     
     if (!canClaimFreePoints.value) {
       uiStore.setError('points', 'Pontos diários não disponíveis ainda');
@@ -153,20 +181,43 @@ export const usePointsStore = defineStore('points', () => {
     }
 
     const db = getOrInitFirestore();
-    if (!db) return;
+    if (!db) {
+      uiStore.setError('points', 'Erro ao conectar com o banco de dados');
+      throw new Error('Database connection failed');
+    }
 
     const userRef = doc(db, 'users', authStore.user.uid);
+    
     try {
       uiStore.setLoading('points', true);
+      
+      // First, validate the current state again
+      const docSnap = await getDoc(userRef);
+      if (!docSnap.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const userData = docSnap.data();
+      const lastUpdate = userData.lastFreePointsUpdate;
+      const now = Math.floor(Date.now() / 1000);
+      const last = lastUpdate?.seconds || Math.floor(lastUpdate?.getTime() / 1000) || 0;
+      
+      if ((now - last) < 60) { // 60 seconds for development
+        uiStore.setError('points', 'Pontos diários não disponíveis ainda');
+        throw new Error('Daily points not available yet');
+      }
+
+      // Atomic update with the server timestamp
       await updateDoc(userRef, {
         freePoints: increment(10),
-        lastFreePointsUpdate: new Date()
+        lastFreePointsUpdate: serverTimestamp()
       });
+
+      // Update local state after successful server update
       freePoints.value += 10;
-      lastFreePointsUpdate.value = new Date();
+      lastFreePointsUpdate.value = new Date(); // Use current time as an approximation
       uiStore.setSuccess('points', 'Pontos diários resgatados!');
     } catch (error) {
-      await initializePoints();
       uiStore.setError('points', error.message);
       throw error;
     } finally {

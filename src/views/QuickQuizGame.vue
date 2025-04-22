@@ -198,7 +198,10 @@ function checkAnswer() {
 
   if (isCorrect.value) {
     correctAnswers.value++;
-    score.value += POINTS_CONFIG.correctAnswer;
+    score.value += POINTS_CONFIG.WORD_FOUND;
+    pointsEarned.value = POINTS_CONFIG.WORD_FOUND;
+  } else {
+    pointsEarned.value = 0;
   }
 }
 
@@ -215,10 +218,16 @@ async function handleGameCompletion() {
   quizVisible.value = false;
   gameCompleted.value = true;
 
-  const isPerfect = correctAnswers.value === selectedQuestions.value.length;
-  const points = calculateGamePoints(correctAnswers.value, isPerfect);
-  await awardPoints(points);
-  pointsEarned.value = points;
+  try {
+    const isPerfect = correctAnswers.value === selectedQuestions.value.length;
+    const points = calculateGamePoints(correctAnswers.value, isPerfect);
+    await awardPoints(points);
+    pointsEarned.value = points;
+  } catch (error) {
+    // Points will not be awarded, but we'll still show the game results
+    console.error('Error awarding points:', error);
+    alert('Você precisa estar logado para ganhar pontos!');
+  }
 }
 
 async function handlePerk(perkId) {

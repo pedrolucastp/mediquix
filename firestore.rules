@@ -30,17 +30,17 @@ service cloud.firestore {
     /**
      * @function validateUserWrite
      * @param {map} data - User document data for write operations
+     * @param {bool} isCreate - Whether this is a create operation
      * @returns {bool} True if user data is valid for write
      */
-    function validateUserWrite(data) {
-      return data.keys().hasAll(['username', 'email'])
-        && isValidString(data.username, 3, 30)
-        && isValidString(data.email, 5, 100)
-        && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
-        && (data.default_difficulty == null || 
+    function validateUserWrite(data, isCreate) {
+      return (!isCreate || data.keys().hasAll(['username', 'email']))
+        && (!('username' in data) || isValidString(data.username, 3, 30))
+        && (!('email' in data) || (isValidString(data.email, 5, 100) && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')))
+        && (!('default_difficulty' in data) || 
             ((data.default_difficulty == -1) || 
              (data.default_difficulty >= 1 && data.default_difficulty <= 3)))
-        && (data.default_speciality == null || 
+        && (!('default_speciality' in data) || 
             ((data.default_speciality == -1) || 
              (data.default_speciality >= 0 && data.default_speciality < 30)))
         && (!('custom_vocabulary' in data) || 
@@ -75,12 +75,12 @@ service cloud.firestore {
       // Allow create with validation
       allow create: if request.auth != null 
                    && request.auth.uid == userId
-                   && validateUserWrite(request.resource.data);
+                   && validateUserWrite(request.resource.data, true);
       
       // Allow update with validation
       allow update: if request.auth != null 
                     && request.auth.uid == userId
-                    && validateUserWrite(request.resource.data)
+                    && validateUserWrite(request.resource.data, false)
                     && validatePointsMutation(request.resource.data, resource.data);
       
       // Allow delete of own data

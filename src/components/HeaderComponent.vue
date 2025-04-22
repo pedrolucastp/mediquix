@@ -2,11 +2,10 @@
   <header :class="{ dark: isDarkMode }">
     <router-link to="/" class="logo">
       <img src="@/assets/logo.svg" alt="Logo" width="30" height="30" />
-      <!-- <h2>MediQuix</h2> -->
     </router-link>
     
-    <!-- Add PointsDisplay here -->
     <PointsDisplay />
+
     <div class="header-controls">
       <button class="menu-toggle" @click="uiStore.toggleDrawer" aria-label="Toggle menu">
         <font-awesome-icon icon="bars" />
@@ -27,7 +26,10 @@
       </div>
 
       <div class="drawer-content">
-
+        <router-link to="/my-vocabulary" class="menu-item" @click="uiStore.toggleDrawer">
+          <font-awesome-icon icon="book" />
+          <span>Meu Vocabulário</span>
+        </router-link>
         <AuthControls />
         <DarkModeToggle />
       </div>
@@ -104,6 +106,7 @@ header {
   left: 0;
   height: 100%;
   width: 100%;
+  /* max-width: 320px; */
   background-color: var(--surface-color);
   z-index: 99;
   transform: translateX(-100%);
@@ -131,9 +134,8 @@ header {
   flex-direction: column;
   padding: var(--spacing-md);
   gap: var(--spacing-lg);
-  height: 100%;
-  justify-content: space-between;
-  align-items: center;
+  height: calc(100% - 120px);
+  overflow-y: auto;
 }
 
 .close-drawer {
@@ -162,8 +164,6 @@ header {
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   transition: all 0.3s ease;
-  /* width: 100%; */
-  /* justify-content: space-between; */
 }
 
 .logo:hover {
@@ -181,6 +181,30 @@ header {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  color: var(--text-color);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+  background-color: var(--hover-color);
+  transform: translateX(4px);
+}
+
+.dark .menu-item {
+  color: var(--dark-text-color);
+}
+
+.dark .menu-item:hover {
+  background-color: var(--dark-hover-color);
 }
 
 /* Dark mode styles */

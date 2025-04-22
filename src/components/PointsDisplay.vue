@@ -105,6 +105,8 @@ async function claimDailyPoints() {
   loading.value = true;
   try {
     await pointsStore.claimDailyPoints();
+  } catch (error) {
+    console.error('Error claiming daily points:', error);
   } finally {
     loading.value = false;
   }

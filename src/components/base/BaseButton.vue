@@ -1,10 +1,16 @@
 <template>
-  <button :class="[
-    'base-button',
-    variant,
-    { icon: !!icon, disabled: disabled, loading: loading },
-    { dark: isDarkMode }
-  ]" :disabled="disabled || loading" :type="type" @click="$emit('click', $event)">
+  <button 
+    :class="[
+      'base-button',
+      variant,
+      { icon: !!icon, disabled: disabled, loading: loading },
+      { dark: isDarkMode }
+    ]" 
+    :disabled="disabled || loading" 
+    :type="type" 
+    @click="handleClick"
+    :title="title"
+  >
     <font-awesome-icon v-if="icon" :icon="['fas', icon]" :size="iconSize" :class="{ 'fa-icon': loading }" />
     <span v-if="$slots.default" :class="{ 'with-icon': icon && !loading }">
       <slot />
@@ -41,13 +47,26 @@ const props = defineProps({
   type: {
     type: String,
     default: 'button'
+  },
+  title: {
+    type: String,
+    default: ''
   }
 });
 
-defineEmits(['click']);
+const emit = defineEmits(['click']);
 
 const uiStore = useUIStore();
 const isDarkMode = computed(() => uiStore.isDarkMode);
+
+async function handleClick(event) {
+  try {
+    await emit('click', event);
+  } catch (error) {
+    // Let the error propagate up but don't break the UI
+    console.error('Error in button click handler:', error);
+  }
+}
 </script>
 
 <style scoped>

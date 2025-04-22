@@ -15,7 +15,8 @@ import {
   sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
-  actionCodeSettings
+  actionCodeSettings,
+  serverTimestamp
 } from '@/firebase';
 import { useSettingsStore } from '../settings';
 import { useUIStore } from '../ui/index';
@@ -82,10 +83,12 @@ export const useAuthStore = defineStore('auth', () => {
         emailVerified: false,
         points: 0,
         freePoints: 100,
-        lastFreePointsUpdate: new Date()
+        lastFreePointsUpdate: serverTimestamp()
       };
 
       const db = getOrInitFirestore();
+      if (!db) throw new Error('Database connection failed');
+
       const userId = String(user.value.uid);
       await setDoc(doc(db, "users", userId), defaultSettings);
       user.value.settings = defaultSettings;
@@ -150,19 +153,19 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserSettings() {
     try {
       uiStore.setLoading('userSettings', true);
-      console.log('[fetchUserSettings] User value:', {
-        user: user.value,
-        uid: user.value?.uid,
-        uidType: typeof user.value?.uid
-      });
       
+      const auth = getOrInitAuth();
+      if (!auth.currentUser) {
+        throw new Error('No authenticated user found');
+      }
+
       if (!user.value?.uid) {
-        throw new Error('User must be authenticated to fetch settings');
+        user.value = auth.currentUser;
       }
 
       const userId = String(user.value.uid);
       const db = getOrInitFirestore();
-      if (!db) return;
+      if (!db) throw new Error('Database connection failed');
 
       const userRef = doc(db, 'users', userId);
       const docSnap = await getDoc(userRef);
@@ -178,21 +181,18 @@ export const useAuthStore = defineStore('auth', () => {
           isPremium: false,
           points: 0,
           freePoints: 100,
-          lastFreePointsUpdate: new Date(),
+          lastFreePointsUpdate: serverTimestamp(),
         };
 
-        // Merge existing settings with defaults, ensuring points fields exist
+        // Merge existing settings with defaults
         const mergedSettings = {
           ...defaultSettings,
           ...settingsData,
-          // Ensure points fields are initialized if missing
           points: settingsData.points ?? defaultSettings.points,
           freePoints: settingsData.freePoints ?? defaultSettings.freePoints,
           lastFreePointsUpdate: settingsData.lastFreePointsUpdate ?? defaultSettings.lastFreePointsUpdate,
-          // Convert number fields properly
           default_difficulty: Number(settingsData.default_difficulty ?? defaultSettings.default_difficulty),
           default_speciality: Number(settingsData.default_speciality ?? defaultSettings.default_speciality),
-          // Ensure arrays and booleans are proper
           custom_vocabulary: Array.isArray(settingsData.custom_vocabulary) ? settingsData.custom_vocabulary : [],
           isPremium: Boolean(settingsData.isPremium),
           premiumActivatedAt: settingsData.premiumActivatedAt || null,
@@ -201,7 +201,10 @@ export const useAuthStore = defineStore('auth', () => {
 
         // Update document if any new fields were added
         if (JSON.stringify(mergedSettings) !== JSON.stringify(settingsData)) {
-          await updateDoc(userRef, mergedSettings);
+          await updateDoc(userRef, {
+            ...mergedSettings,
+            lastFreePointsUpdate: settingsData.lastFreePointsUpdate ?? serverTimestamp()
+          });
         }
 
         user.value.settings = mergedSettings;
@@ -217,7 +220,34 @@ export const useAuthStore = defineStore('auth', () => {
           lastFreePointsUpdate: mergedSettings.lastFreePointsUpdate
         });
       } else {
-        throw new Error('User settings document not found');
+        // If document doesn't exist, create it with default settings
+        const defaultSettings = {
+          username: user.value.email.split('@')[0],
+          email: user.value.email,
+          custom_vocabulary: [],
+          default_difficulty: Number(settingsStore.settings.defaultDifficulty),
+          default_speciality: Number(settingsStore.settings.defaultSpecialty),
+          isPremium: false,
+          premiumActivatedAt: null,
+          emailVerified: user.value.emailVerified || false,
+          points: 0,
+          freePoints: 100,
+          lastFreePointsUpdate: serverTimestamp()
+        };
+
+        await setDoc(userRef, defaultSettings);
+        user.value.settings = defaultSettings;
+        
+        settingsStore.setDefaultPreferences({
+          defaultSpecialty: defaultSettings.default_speciality,
+          defaultDifficulty: defaultSettings.default_difficulty
+        });
+
+        pointsStore.$patch({
+          points: defaultSettings.points,
+          freePoints: defaultSettings.freePoints,
+          lastFreePointsUpdate: defaultSettings.lastFreePointsUpdate
+        });
       }
     } catch (error) {
       console.error("Error fetching user settings:", error);
@@ -237,7 +267,9 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const userId = String(user.value.uid);
-      const userDocRef = doc('users', userId);
+      const db = getOrInitFirestore();
+      if (!db) throw new Error('Database connection failed');
+      const userDocRef = doc(db, 'users', userId);
       
       const currentSettings = user.value.settings || {};
       const updatedSettings = {

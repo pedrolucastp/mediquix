@@ -28,8 +28,7 @@ const games = [
   { link: "/cards", icon: "brain", title: "Jogo da Memória", description: "Teste sua memória com termos médicos." },
   { link: "/crosswords", icon: "pen-to-square", title: "Palavras Cruzadas", description: "Desafie seu conhecimento com palavras cruzadas médicas." },
   { link: "/hangman", icon: "ghost", title: "Jogo da Forca", description: "Adivinhe palavras médicas e teste seu conhecimento." },
-  { link: "/word-search", icon: "feather", title: "Caça Palavras", description: "Encontre palavras médicas escondidas na grade." },
-  { link: "/my-vocabulary", icon: "book", title: "Meu Vocabulário", description: "Gerencie e expanda seu vocabulário médico.", highlight: true }
+  { link: "/word-search", icon: "feather", title: "Caça Palavras", description: "Encontre palavras médicas escondidas na grade." }
 ];
 </script>
 
