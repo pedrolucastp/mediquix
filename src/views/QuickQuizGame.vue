@@ -64,6 +64,7 @@ import GameContainer from "@/components/game/GameContainer.vue";
 import { useGamePoints } from '@/composables/useGamePoints';
 import { useGameTimer } from '@/composables/useGameTimer';
 import { useVocabularyStore } from "@/store/vocabulary";
+import { useGameState } from '@/composables/useGameState';
 
 const gameInstructions = `Responda as questões em tempo limitado!
 - Leia a pergunta e digite a resposta
@@ -80,19 +81,23 @@ const questionCount = ref(10);
 const selectedQuestions = ref([]);
 const quizVisible = ref(true);
 const userAnswer = ref('');
+const gameWords = ref([]);
+const score = ref(0);
 const isAnswered = ref(false);
 const isCorrect = ref(false);
 const feedbackMessage = ref('');
 const isLastQuestion = ref(false);
 const timePercentage = ref(100);
-const score = ref(0);
 const pointsEarned = ref(0);
 const correctAnswers = ref(0);
 const gameCompleted = ref(false);
 const timeExpired = ref(false);
+const showingHint = ref(false);
+const statusMessage = ref('');
 
 const vocabularyStore = useVocabularyStore();
 const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
+const { startGame: initGameState, endGame, resetGame } = useGameState();
 
 const { timeLeft, timerDisplay, startTimer, pauseTimer, resetTimer } = useGameTimer({
   initialTime: timePerQuestion.value,
@@ -125,6 +130,7 @@ function shuffleArray(array) {
 }
 
 function startQuiz() {
+  resetGame();
   currentQuestionIndex.value = 0;
   const filteredWords = vocabularyStore.filteredWords;
   if (filteredWords.length === 0) {
@@ -217,6 +223,7 @@ function nextQuestion() {
 async function handleGameCompletion() {
   quizVisible.value = false;
   gameCompleted.value = true;
+  endGame();
 
   try {
     const isPerfect = correctAnswers.value === selectedQuestions.value.length;
@@ -224,7 +231,6 @@ async function handleGameCompletion() {
     await awardPoints(points);
     pointsEarned.value = points;
   } catch (error) {
-    // Points will not be awarded, but we'll still show the game results
     console.error('Error awarding points:', error);
     alert('Você precisa estar logado para ganhar pontos!');
   }
@@ -233,10 +239,26 @@ async function handleGameCompletion() {
 async function handlePerk(perkId) {
   const success = await usePerk(perkId);
   if (!success) return;
-  if (perkId === 'skip') {
-    nextQuestion();
+
+  if (perkId === 'hint') {
+    // Show a hint for the current word
+    const word = selectedQuestions.value[currentQuestionIndex.value];
+    if (word && !showingHint.value) {
+      showingHint.value = true;
+      statusMessage.value = `Dica: ${word.clue}`;
+      setTimeout(() => {
+        showingHint.value = false;
+        statusMessage.value = '';
+      }, 3000);
+    }
+  } else if (perkId === 'skip') {
+    // Skip current question
+    if (currentQuestionIndex.value < selectedQuestions.value.length - 1) {
+      nextQuestion();
+    }
   } else if (perkId === 'extra_time') {
-    timePercentage.value += 30;
+    // Add 30 seconds to the timer
+    timePercentage.value = Math.min(100, timePercentage.value + 30);
   }
 }
 

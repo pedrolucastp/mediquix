@@ -61,6 +61,7 @@ import { useVocabularyStore } from '@/store/vocabulary'
 import GameContainer from "@/components/game/GameContainer.vue"
 import BaseButton from "@/components/base/BaseButton.vue"
 import { useGamePoints } from '@/composables/useGamePoints'
+import { useGameState } from '@/composables/useGameState';
 
 const gameInstructions = `Complete as palavras cruzadas usando as dicas fornecidas.
 - Clique em uma célula para selecionar uma palavra
@@ -72,6 +73,7 @@ const gameInstructions = `Complete as palavras cruzadas usando as dicas fornecid
 - Todas as palavras estão relacionadas à especialidade médica selecionada`
 
 const { usePerk, POINTS_CONFIG, awardPoints } = useGamePoints();
+const { startGame: initGameState, endGame, resetGame } = useGameState();
 
 // Constants
 const PLACEMENT_DELAY = 20; // 500ms delay between attempts
@@ -381,7 +383,7 @@ function calculateGamePoints(mistakes) {
 }
 
 async function handleGameCompletion(mistakes = 0) {
-  gameStarted.value = false;
+  endGame();
   const points = calculateGamePoints(mistakes);
   await awardPoints(points);
   pointsEarned.value = points;
@@ -705,13 +707,16 @@ function scrollToGridCenter() {
 }
 
 async function startGame(force = false) {
-  if (!force && !isInitialLoad.value) {
-    return
-  }
-
+  resetGame();
+  loading.value = true;
+  isLoading.value = true;
+  
   try {
-    isLoading.value = true
-    loading.value = true
+    // Initialize game state
+    if (!initGameState()) {
+      throw new Error('Failed to initialize game state');
+    }
+    
     const words = vocabularyStore.filteredWords
     const success = await generateCrossword(words)
 
@@ -737,22 +742,30 @@ async function startGame(force = false) {
 async function handlePerk(perkId) {
   const success = await usePerk(perkId);
   if (!success) return;
+
   if (perkId === 'hint') {
     // Reveal a random letter in the crossword grid
-    const allInputs = Object.values(cellRefs).filter(input => input && input.value === '');
+    const allInputs = Object.values(cellRefs).filter(input => 
+      input && 
+      input.value === '' && 
+      input.dataset.letter
+    );
+    
     if (allInputs.length > 0) {
       const randomInput = allInputs[Math.floor(Math.random() * allInputs.length)];
-      randomInput.value = randomInput.dataset.correct;
-      randomInput.style.backgroundColor = '#ffe066';
-      setTimeout(() => {
-        randomInput.style.backgroundColor = '';
-      }, 1000);
+      const letter = randomInput.dataset.letter;
+      randomInput.value = letter;
+      randomInput.classList.add('revealed');
+      checkWord(randomInput);
     }
-  } else if (perkId === 'extra_time') {
-    // Placeholder: implement timer logic if/when timer is added
-    // e.g., timer.value += 30;
   } else if (perkId === 'skip') {
-    // Placeholder: implement skip logic if/when skipping clues is supported
+    // Skip current grid and generate a new one
+    await startGame(true);
+  } else if (perkId === 'extra_time') {
+    // Add 30 seconds to the timer if it exists
+    if (typeof timeLeft !== 'undefined' && timeLeft) {
+      timeLeft.value += 30;
+    }
   }
 }
 
@@ -856,12 +869,6 @@ onMounted(() => {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
-}
-
-/* Firefox */
-#crossword {
-  /* scrollbar-width: thin; */
-  /* scrollbar-color: var(--primary-color) var(--surface-color); */
 }
 
 @media (max-width: 768px) {

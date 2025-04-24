@@ -1,6 +1,6 @@
 <template>
   <GameContainer title="Caça-Palavras" :gameInstructions="gameInstructions" :loading="loading" :score="score"
-    :availablePerks="['hint']" @specialty-change="createGame" @difficulty-change="createGame">
+    :availablePerks="['hint', 'skip', 'extra_time']" @specialty-change="createGame" @difficulty-change="createGame">
    
     <template #game-settings>
       <div class="game-settings">
@@ -73,6 +73,7 @@ import { useVocabularyStore } from "@/store/vocabulary";
 import { useSettingsStore } from "@/store/settings";
 import BaseButton from '@/components/base/BaseButton.vue';
 import { useGamePoints } from '@/composables/useGamePoints';
+import { useGameState } from '@/composables/useGameState';
 
 const gameInstructions = `Encontre todas as palavras escondidas na grade!
 - Clique e arraste para selecionar as palavras
@@ -80,7 +81,8 @@ const gameInstructions = `Encontre todas as palavras escondidas na grade!
 - Ganhe 10 pontos por completar o jogo
 - Ganhe 15 pontos de bônus se não errar nenhuma vez
 - Use 'hint' (5 pts) para revelar uma palavra aleatória
-- Use 'extra_time' (3 pts) para +30 segundos`;
+- Use 'extra_time' (3 pts) para +30 segundos
+- Use 'skip' (10 pts) para gerar um novo jogo`;
 
 const loading = ref(false);
 const settingsStore = useSettingsStore();
@@ -132,6 +134,7 @@ const selectedCells = ref([]);
 const pointsEarned = ref(0);
 
 const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
+const { startGame: initGameState, endGame, resetGame } = useGameState();
 
 const allWordsFound = computed(() => {
   return gameWords.value.length > 0 &&
@@ -145,6 +148,7 @@ function toggleWordList() {
 }
 
 function createGame() {
+  resetGame();
   score.value = 0;
   statusMessage.value = "";
   selectedCells.value = [];
@@ -372,7 +376,7 @@ function isCellFound(row, col) {
   return foundCells[`${row}-${col}`] === true;
 }
 
-function checkSelectedWord() {
+async function checkSelectedWord() {
   if (selectedCells.value.length !== 2) return;
 
   const [first, second] = selectedCells.value;
@@ -437,8 +441,9 @@ function checkSelectedWord() {
     statusMessage.value = `Você encontrou: ${foundWordObj.word.toUpperCase()}`;
     resetSelection();
     if (foundWords.value.length === gameWords.value.length) {
+      endGame();
       const points = calculateGamePoints();
-      awardPoints(points);
+      await awardPoints(points);
       pointsEarned.value = points;
       setTimeout(() => {
         alert(
@@ -465,19 +470,28 @@ function calculateGamePoints() {
 async function handlePerk(perkId) {
   const success = await usePerk(perkId);
   if (!success) return;
+
   if (perkId === 'hint') {
     const unfoundWords = gameWords.value
       .filter(word => !foundWords.value.includes(word.word.toUpperCase()));
+    
     if (unfoundWords.length > 0) {
       const randomWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
       const cells = findWordCells(randomWord.word.toUpperCase());
+      
       cells.forEach(cell => {
         const el = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
         if (el) {
           el.classList.add('hint');
-          setTimeout(() => el.classList.remove('hint'), 1000);
+          setTimeout(() => el.classList.remove('hint'), 2000);
         }
       });
+    }
+  } else if (perkId === 'skip') {
+    await createGame();
+  } else if (perkId === 'extra_time') {
+    if (typeof timeLeft !== 'undefined' && timeLeft) {
+      timeLeft.value += 30;
     }
   }
 }

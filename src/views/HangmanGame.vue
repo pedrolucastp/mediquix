@@ -274,6 +274,8 @@ function calculatePoints() {
   if (lives.value === maxLives.value) {
     points += POINTS_CONFIG.PERFECT_SCORE;
   }
+
+  return points;
 }
 
 async function handleGameOver(hasWon) {
@@ -294,22 +296,22 @@ async function handleGameOver(hasWon) {
 async function handlePerk(perkId) {
   const success = await usePerk(perkId);
   if (!success) return;
+
   if (perkId === 'hint' && currentWord.value && !gameOver.value) {
-    // Encontra uma letra não revelada
-    const word = currentWord.value.word.toUpperCase();
-    const unrevealedLetters = word
-      .split('')
-      .filter(letter => !guessedLetters.value.includes(letter));
-    if (unrevealedLetters.length > 0) {
-      // Revela uma letra não revelada aleatória
-      const letter = unrevealedLetters[Math.floor(Math.random() * unrevealedLetters.length)];
-      guessedLetters.value.push(letter);
-      message.value = `Dica: A letra "${letter}" existe na palavra.`;
-      // Verifica se a palavra está completa após a dica
-      if (displayedWord.value.join('') === currentWord.value.word) {
-        handleGameOver(true);
-      }
+    // Find a hidden letter to reveal
+    const hiddenIndices = currentWord.value.word.split('').map((letter, index) => 
+      guessedLetters.value.has(letter.toUpperCase()) ? -1 : index
+    ).filter(index => index !== -1);
+
+    if (hiddenIndices.length > 0) {
+      const randomIndex = hiddenIndices[Math.floor(Math.random() * hiddenIndices.length)];
+      const letter = currentWord.value.word[randomIndex].toUpperCase();
+      guessedLetters.value.add(letter);
+      checkWinCondition();
     }
+  } else if (perkId === 'skip' && !gameOver.value) {
+    // Skip current word and get a new one
+    await startNewGame();
   }
 }
 

@@ -28,15 +28,6 @@
           </div>
         </div>
         <div class="actions">
-
-          <!-- <BaseButton 
-            variant="outline" 
-            icon="ellipsis-h" 
-            @click="openOptionsModal"
-            class="options-btn"
-          >
-            Ações em Lote
-          </BaseButton> -->
           <BaseButton variant="outline" icon="check-square" @click="toggleSelectionMode"
             :class="{ active: selectionMode }">
             {{ selectionMode ? "Cancelar" : "Selecionar Itens" }}
@@ -54,34 +45,6 @@
         <p class="results-count">{{ displayedWords.length }} termos encontrados</p>
       </div>
     </div>
-
-    <!-- Batch Actions Modal -->
-    <!-- <BaseModal
-      v-model="showOptionsModal"
-      title="Ações em Lote"
-    >
-      <div class="batch-actions">
-        <div class="batch-section">
-          <h4>Estado dos Termos</h4>
-          <div class="batch-buttons">
-            <BaseButton variant="outline" icon="check" @click="activateAll" class="batch-btn">
-              Ativar Todos
-            </BaseButton>
-            <BaseButton variant="outline" icon="times" @click="deactivateAll" class="batch-btn">
-              Desativar Todos
-            </BaseButton>
-          </div>
-        </div>
-        <div class="batch-section">
-          <h4>Gerenciar Duplicatas</h4>
-          <div class="batch-buttons">
-            <BaseButton variant="accent" icon="trash" @click="removeDuplicates" class="batch-btn">
-              Remover Duplicatas
-            </BaseButton>
-          </div>
-        </div>
-      </div>
-    </BaseModal> -->
 
     <div class="vocabulary-list">
       <div v-for="(word, index) in displayedWords" :key="word.word + index" class="term-item" :class="{
@@ -256,7 +219,6 @@ const highlightDuplicates = ref(false);
 const onlyActive = ref(false);
 const searchTerm = ref("");
 const showAddModal = ref(false);
-const showOptionsModal = ref(false);
 const selectionMode = ref(false);
 const selectedWords = ref(new Set());
 
@@ -369,30 +331,7 @@ function toggleOnlyActive() {
   onlyActive.value = !onlyActive.value;
 }
 
-// function activateAll() {
-//   if (confirm("Deseja realmente ativar todos os itens?")) {
-//     vocabularyStore.words.forEach((item) => (item.isActive = true));
-//     saveWordsToLocalStorage(vocabularyStore.words);
-//   }
-// }
-
-// function deactivateAll() {
-//   if (confirm("Deseja realmente desativar todos os itens?")) {
-//     vocabularyStore.words.forEach((item) => (item.isActive = false));
-//     saveWordsToLocalStorage(vocabularyStore.words);
-//   }
-// }
-
-// function openOptionsModal() {
-//   showOptionsModal.value = true;
-// }
-
-function closeOptionsModal() {
-  showOptionsModal.value = false;
-}
-
 function openAddWordModal() {
-  closeOptionsModal();
   showAddModal.value = true;
 }
 
@@ -800,27 +739,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   color: var(--text-secondary);
 }
 
-.batch-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.batch-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.batch-buttons {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.batch-btn {
-  width: 100%;
-}
-
 .vocabulary-list {
   display: flex;
   flex-direction: column;
@@ -898,7 +816,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   transform: translateY(-2px);
 }
 
-.difficulty-badge {}
 
 .difficulty-1 {
   color: #2ecc71;
@@ -974,8 +891,6 @@ function toggleEditSpecialty(index, specialtyIndex) {
   color: var(--dark-text-color);
   border: 1px solid var(--dark-border-color);
 }
-
-.active-badge {}
 
 .active-badge.is-active {
   color: #2ecc71;

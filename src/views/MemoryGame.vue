@@ -56,6 +56,7 @@ import GameContainer from "@/components/game/GameContainer.vue";
 import GameCardFlip from "@/components/game/GameCardFlip.vue";
 import { useGamePoints } from '@/composables/useGamePoints';
 import { useVocabularyStore } from "@/store/vocabulary";
+import { useGameState } from '@/composables/useGameState';
 
 const gameInstructions = `Encontre os pares de palavras correspondentes!
 - Clique em uma carta para revelar a palavra
@@ -69,6 +70,7 @@ const gameInstructions = `Encontre os pares de palavras correspondentes!
 const loading = ref(false);
 const vocabularyStore = useVocabularyStore();
 const { POINTS_CONFIG, awardPoints, usePerk } = useGamePoints();
+const { startGame: initGameState, endGame, resetGame } = useGameState();
 
 const score = ref(0);
 const attempts = ref(0);
@@ -92,15 +94,14 @@ function handlePairCountChange(e) {
 }
 
 function createBoard() {
+  resetGame();
   score.value = 0;
   attempts.value = 0;
   pointsEarned.value = 0;
-  count.value = 0;
+  gameCards.value = [];
   matchedCards.value = [];
+  gameWords.value = [];
   maxOpenCards.value = 2;
-  firstCardIndex.value = null;
-  secondCardIndex.value = null;
-  thirdCardIndex.value = null;
 
   let filteredWords = vocabularyStore.words.filter((word) => word.isActive);
   if (filteredWords.length < 2) {
@@ -229,21 +230,41 @@ function resetGuesses() {
 async function handlePerk(perkId) {
   const success = await usePerk(perkId);
   if (!success) return;
+
   if (perkId === 'hint' && currentDefinition.value) {
+    // Find unmatched cards for the current word and reveal them temporarily
     const word = currentDefinition.value.word;
     const indices = gameCards.value
       .map((card, idx) => ({ card, idx }))
       .filter(({ card }) => card.word === word && !card.matched && !card.flipped)
       .map(({ idx }) => idx);
+
     if (indices.length >= 2) {
       gameCards.value[indices[0]].flipped = true;
       gameCards.value[indices[1]].flipped = true;
+      
+      // After 2 seconds, check if they match or flip them back
       setTimeout(() => {
-        checkMatch();
-      }, 500);
+        if (!gameCards.value[indices[0]].matched) {
+          checkMatch();
+        }
+      }, 2000);
     }
   } else if (perkId === 'open_third_card') {
+    // Allow opening three cards at once for 30 seconds
     maxOpenCards.value = 3;
+    setTimeout(() => {
+      maxOpenCards.value = 2;
+      // If three cards are open, flip them back
+      if (count.value === 3) {
+        unflipCards();
+      }
+    }, 30000);
+  } else if (perkId === 'extra_time') {
+    // Add 30 seconds to the timer if it exists
+    if (typeof timeLeft !== 'undefined' && timeLeft) {
+      timeLeft.value += 30;
+    }
   }
 }
 
@@ -254,6 +275,7 @@ function calculateGamePoints() {
 }
 
 async function handleGameCompletion() {
+  endGame();
   const points = calculateGamePoints();
   await awardPoints(points);
   pointsEarned.value = points;
