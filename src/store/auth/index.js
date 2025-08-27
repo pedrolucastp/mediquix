@@ -65,12 +65,19 @@ export const useAuthStore = defineStore('auth', () => {
       uiStore.setLoading('auth', true);
       const auth = getOrInitAuth();
       
-      // Create user without persistence
+      // Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      user.value = userCredential.user;
+      
+      // Double check authentication state
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated after signup');
+      }
+      
+      user.value = currentUser;
 
       // Send verification email
-      await sendEmailVerification(user.value);
+      await sendEmailVerification(currentUser);
 
       const defaultSettings = {
         username: email.split('@')[0],
@@ -86,11 +93,22 @@ export const useAuthStore = defineStore('auth', () => {
         lastFreePointsUpdate: serverTimestamp()
       };
 
+      // Initialize Firestore
       const db = getOrInitFirestore();
       if (!db) throw new Error('Database connection failed');
 
-      const userId = String(user.value.uid);
-      await setDoc(doc(db, "users", userId), defaultSettings);
+      // Use currentUser.uid to ensure we have the correct authenticated user
+      const userId = currentUser.uid;
+      
+      try {
+        await setDoc(doc(db, "users", userId), defaultSettings);
+      } catch (firestoreError) {
+        console.error('Firestore write failed:', firestoreError);
+        // Attempt to delete the auth user if profile creation fails
+        await currentUser.delete();
+        throw new Error('Failed to create user profile. Please try again.');
+      }
+      
       user.value.settings = defaultSettings;
       
       settingsStore.setDefaultPreferences({
